@@ -126,7 +126,7 @@ feedback_text = st.sidebar.text_area("Optional: Any feature requests or suggesti
 
 if not st.session_state['is_calculated']:
     # Show the button ONLY if they haven't unlocked it yet
-    if st.sidebar.button("🚀 Calculate My Freedom Plan", type="primary", width="stretch"):
+    if st.sidebar.button("🚀 Calculate My Freedom Plan", type="primary", use_container_width=True):
         st.rerun() # Forces the app to reload instantly
 
 # ==========================================
@@ -293,8 +293,7 @@ else:
         opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
     ).transform_filter(nearest)
 
-    st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), use_container_width=True)
-
+    st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), width="stretch")
     st.divider()
     
     # Safely handle users who are already past retirement age
