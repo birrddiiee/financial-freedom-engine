@@ -126,8 +126,8 @@ feedback_text = st.sidebar.text_area("Optional: Any feature requests or suggesti
 
 if not st.session_state['is_calculated']:
     # Show the button ONLY if they haven't unlocked it yet
-    if st.sidebar.button("🚀 Calculate My Freedom Plan", type="primary", use_container_width=True):
-        st.rerun() # Forces the app to reload instantly
+    if st.sidebar.button("🚀 Calculate My Freedom Plan"):
+       st.success("Button click registered! Processing...")
 
 # ==========================================
 # MAIN DASHBOARD AREA
@@ -194,9 +194,9 @@ else:
         "feedback": feedback_text
     }
     try:
-        supabase.table("user_data").upsert(data_payload).execute()
-    except Exception:
-        pass # Fail silently so we don't interrupt their experience with error popups
+        supabase.table("user_data").insert(data_payload).execute()
+    except Exception as e:
+        st.error(f"🚨 ALERT - We caught the bug: {e}")
 
     # 2. Run Diagnostics
     user_data_logic = {
