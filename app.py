@@ -80,7 +80,7 @@ if 'user_id' not in st.session_state:
 # 🖥️ MAIN UI: TITLE & INSTANT GRATIFICATION
 # ==========================================
 st.title("🇮🇳 Financial Freedom Engine")
-st.markdown("Adjust your parameters below. Your 100-year wealth projection will update **instantly**.")
+st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**.")
 
 # ==========================================
 # 🎛️ MAIN PAGE INPUT PANEL (NO MORE SIDEBAR!)
