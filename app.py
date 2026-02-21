@@ -60,8 +60,11 @@ st.sidebar.header("⚙️ Configure Your Plan")
 
 # --- STEP 1: USER PROFILE ---
 with st.sidebar.expander("1️⃣ User Profile", expanded=True):
-    age = st.number_input("Current Age", value=30, step=1)
-    retire_age = st.number_input("Retirement Age", value=60, step=1)
+    age = st.number_input("Current Age", value=30, min_value=18, max_value=100, step=1)
+    
+    # Dynamically set the minimum retirement age to be their current age!
+    default_retire = max(60, age) 
+    retire_age = st.number_input("Retirement Age", value=default_retire, min_value=age, max_value=100, step=1)
     dependents = st.number_input("Number of Dependents", value=2, step=1)
     income = st.number_input("Monthly In-hand Income (₹)", value=100000, step=5000)
     
@@ -123,8 +126,7 @@ feedback_text = st.sidebar.text_area("Optional: Any feature requests or suggesti
 
 if not st.session_state['is_calculated']:
     # Show the button ONLY if they haven't unlocked it yet
-    if st.sidebar.button("🚀 Calculate My Freedom Plan", type="primary", use_container_width=True):
-        st.session_state['is_calculated'] = True
+    if st.sidebar.button("🚀 Calculate My Freedom Plan", type="primary", width="stretch"):
         st.rerun() # Forces the app to reload instantly
 
 # ==========================================
@@ -294,8 +296,12 @@ else:
     st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), use_container_width=True)
 
     st.divider()
-    target_row = df[df['Age'] == retire_age].iloc[0]
+    
+    # Safely handle users who are already past retirement age
+    safe_retire_age = max(age, retire_age)
+    target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = target_row['Gap']
+    
     col_v1, col_v2 = st.columns(2)
 
     with col_v1:
