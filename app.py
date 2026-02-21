@@ -196,7 +196,7 @@ else:
     
     # DATABASE UNMASKING FIX
     try:
-        supabase.table("user_data").upsert(data_payload).execute()
+        supabase.table("user_data").insert(data_payload).execute()
     except Exception as e:
         st.error(f"🚨 ALERT - Database Error: {e}") 
 
