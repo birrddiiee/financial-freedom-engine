@@ -137,7 +137,16 @@ st.title("🇮🇳 Financial Freedom Engine")
 
 if not st.session_state['is_calculated']:
     # --- WELCOME SCREEN ---
-    st.info("👈 Please enter your details in the sidebar and click **'🚀 Calculate My Freedom Plan'** to view your personalized roadmap.")
+    # Custom HTML/JS Button to force the sidebar open on mobile
+    sidebar_opener = """
+    <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+        <button onclick="window.parent.document.querySelector('[data-testid=\\'collapsedControl\\']').click();" 
+                style="background-color: #FF4B4B; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            ⚙️ Tap Here to Open Input Panel
+        </button>
+    </div>
+    """
+    components.html(sidebar_opener, height=70)
     st.markdown("""
     ### Welcome to your Personal Wealth Architect
     By compiling your income, assets, and goals, this engine will run a 100-year simulation to determine your exact path to financial independence. 
