@@ -105,8 +105,9 @@ with st.expander("1️⃣ Core Profile & Income", expanded=False):
     rent = c8.number_input("Monthly Rent (₹)", value=20000, step=1000)
     total_monthly_expense = living_expense + rent
     
-    tax_options = [0.0, 0.10, 0.20, 0.30]
-    tax_slab = c9.selectbox("Tax Slab", options=tax_options, index=3, format_func=lambda x: f"{int(x*100)}%")
+    tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
+    # Changed index to 6 so it still defaults to 30%, or change to 0 to default to 0%
+    tax_slab = c9.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
     use_post_tax = st.toggle("Calculate Post-Tax Returns?", value=True)
 
 # --- STEP 2: SAFETY & LIQUIDITY ---
