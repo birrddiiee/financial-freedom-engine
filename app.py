@@ -79,7 +79,7 @@ if 'user_id' not in st.session_state:
 # ==========================================
 # 🖥️ MAIN UI: TITLE & INSTANT GRATIFICATION
 # ==========================================
-st.title("🇮🇳 Financial Freedom Engine")
+st.title("🇮🇳 Financial Freedom Engine (🔒 100% Anonymous)")
 st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**.")
 
 # ==========================================
