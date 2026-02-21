@@ -137,7 +137,7 @@ st.title("🇮🇳 Financial Freedom Engine")
 
 if not st.session_state['is_calculated']:
     # --- WELCOME SCREEN ---
-    st.info("### ↖️ Tap the **>** icon in the top left corner to open the input panel.")
+    st.info("### In mobile screen ↖️ Tap the **>>** icon in the top left corner to open the input panel.")
     st.warning("Please enter your details in the sidebar and click **'🚀 Calculate My Freedom Plan'** to view your personalized roadmap.")
     st.markdown("""
     ### Welcome to your Personal Wealth Architect
