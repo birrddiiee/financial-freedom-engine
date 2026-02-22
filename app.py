@@ -193,8 +193,8 @@ with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=Fals
     
     c4, c5, c6 = st.columns(3)
     emi = c4.number_input(f"Monthly EMIs ({sym})", value=0, step=None)
-    term_insurance = c5.number_input(f"Term Cover ({sym})", value=int(p_data["income"]*12*10), step=None)
-    health_insurance = c6.number_input(f"Health Cover ({sym})", value=int(p_data["income"]*12*2), step=None)
+    term_insurance = c5.number_input(f"Life/Term Insurance Cover ({sym})", value=int(p_data["income"]*12*10), step=None)
+    health_insurance = c6.number_input(f"Health Insurance Cover ({sym})", value=int(p_data["income"]*12*2), step=None)
 
 # --- STEP 3: ASSETS ---
 with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
