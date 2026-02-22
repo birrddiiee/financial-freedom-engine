@@ -256,7 +256,7 @@ if st.session_state.get('has_interacted', False):
         "id": st.session_state['user_id'], 
         "currency": curr_choice,           # 🆕 Captures "🇮🇳 INR (₹)" or "🇺🇸 USD ($)"
         "persona": selected_persona,       # 🆕 Captures the exact dropdown text
-        "age": age, "retire_age": retire_age, "dependents": dependents,
+        "age": age, "retire_age": safe_retire_age, "dependents": dependents,
         "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
         "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
         "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
@@ -380,7 +380,7 @@ gap_val = target_row['Gap']
 
 col_v1, col_v2 = st.columns(2)
 with col_v1:
-    st.markdown(f"### 🎯 Goal: Retire at {retire_age}")
+    st.markdown(f"### 🎯 Goal: Retire at {safe_retire_age}")
     
     if is_inr:
         formatted_gap = f"{sym}{abs(gap_val)/10000000:.2f} Cr"
