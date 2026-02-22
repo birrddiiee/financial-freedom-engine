@@ -149,6 +149,9 @@ if is_inr:
     p_data = personas_data.get(selected_persona, default_custom)
 
 else:
+    # 🆕 THE FIX: Give the variable a clean name for your database so it doesn't crash
+    selected_persona = "🌎 Global Default (No Persona)" 
+    
     # 🌎 GLOBAL DEFAULT NUMBERS (Fallback for all other currencies)
     p_data = {
         "age": 30, "retire_age": 60, "income": 5000, "rent": 1500, "living_expense": 2000,
@@ -247,7 +250,10 @@ net_worth = cash + fd + epf + mutual_funds + stocks + gold + arbitrage
 # ==========================================
 if st.session_state.get('has_interacted', False):
     data_payload = {
-        "id": st.session_state['user_id'], "age": age, "retire_age": retire_age, "dependents": dependents,
+        "id": st.session_state['user_id'], 
+        "currency": curr_choice,           # 🆕 Captures "🇮🇳 INR (₹)" or "🇺🇸 USD ($)"
+        "persona": selected_persona,       # 🆕 Captures the exact dropdown text
+        "age": age, "retire_age": retire_age, "dependents": dependents,
         "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
         "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
         "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
