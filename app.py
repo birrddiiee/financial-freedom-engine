@@ -169,9 +169,12 @@ with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False
     c1, c2, c3 = st.columns(3)
     age = c1.number_input("Current Age", value=p_data["age"], min_value=18, max_value=100, step=None)
     default_retire = max(p_data["retire_age"], age)
-    retire_age = c2.number_input("Retirement Age", value=default_retire, min_value=age, max_value=100, step=None)
+    retire_age = c2.number_input("Retirement Age(Will default to current in calculation. If retirement , Current age)", value=default_retire, min_value=18, max_value=100, step=None)
     dependents = c3.number_input("Dependents", value=2, step=None)
-    
+
+    if retire_age < age:
+        st.warning(f"⚠️ Retirement age should not be less than current age ({age}). Will default to current age in calculations.")
+    safe_retire_age = max(age, retire_age)
     c4, c5, c6 = st.columns(3)
     income = c4.number_input(f"Monthly In-hand ({sym})", value=p_data["income"], step=None)
     basic_salary = c5.number_input(f"Monthly Basic ({sym})", value=int(p_data["income"]*0.4), step=None)
@@ -315,7 +318,7 @@ eff_epf = logic.calculate_post_tax_rate(rate_epf, "EPF", tax_slab, use_post_tax)
 eff_sip = logic.calculate_post_tax_rate(rate_new_sip, "Equity", tax_slab, use_post_tax)
 
 user_data_calc = {
-    "age": age, "retire_age": retire_age, "living_expense": living_expense, "rent": rent,
+    "age": age, "retire_age": safe_retire_age, "living_expense": living_expense, "rent": rent,
     "current_sip": current_sip, "monthly_pf": monthly_pf_inflow, "step_up": step_up,
     "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal,
     "cash": cash, "fd": fd, "epf": epf, "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage,
