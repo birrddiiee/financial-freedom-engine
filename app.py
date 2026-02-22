@@ -91,43 +91,69 @@ if 'has_interacted' not in st.session_state:
     st.session_state['has_interacted'] = False
 
 # ==========================================
-# 🖥️ MAIN UI: TITLE & PERSONAS
+# 🖥️ MAIN UI: TITLE & SETTINGS
 # ==========================================
-st.title("🇮🇳 Financial Freedom Engine")
-st.markdown("Adjust your parameters below. Your 100-year wealth projection will update **instantly**.")
+col_title, col_settings = st.columns([3, 1])
 
-# 👤 PERSONA TEMPLATES (TIERED DROPDOWN)
-st.markdown("### ⚡ Quick Start: Choose a Profile")
+with col_settings:
+    curr_choice = st.selectbox(
+        "🌎 Currency & Region", 
+        options=["🇮🇳 INR (₹)", "🇺🇸 USD ($)", "🇪🇺 EUR (€)", "🇬🇧 GBP (£)", "🇯🇵 JPY (¥)", "🇦🇺 AUD ($)", "🇨🇦 CAD ($)"],
+        index=0
+    )
+    # Extract the flag and symbol from their choice
+    flag = curr_choice.split(" ")[0]
+    sym = curr_choice.split("(")[1].replace(")", "")
+    is_inr = (sym == "₹")
 
-persona_options = [
-    "⚙️ Custom (I will enter my own numbers)",
-    "💻 The City Techie (Age 28, High Income, High Rent)",
-    "🏔️ The Tier-2 Family (Age 36, Stability & EPF Focus)",
-    "🔥 The Aggressive FIRE Chaser (Age 32, High Equity SIPs)"
-]
+with col_title:
+    st.title(f"{flag} Financial Freedom Engine")
+    st.markdown("Adjust your parameters below in four sections. Your wealth projection will update **instantly**.")
 
-selected_persona = st.selectbox("Select a baseline profile to auto-fill the engine:", options=persona_options)
+# ==========================================
+# 👤 PERSONA TEMPLATES (INDIA ONLY)
+# ==========================================
+if is_inr:
+    st.markdown("### ⚡ Quick Start: Choose a Profile")
 
-personas_data = {
-    "💻 The City Techie (Age 28, High Income, High Rent)": {
-        "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
-        "cash": 100000, "fd": 0, "epf": 300000, "mf": 800000, "sip": 40000, "housing": "Rent Forever"
-    },
-    "🏔️ The Tier-2 Family (Age 36, Stability & EPF Focus)": {
-        "age": 36, "retire_age": 60, "income": 90000, "rent": 15000, "living_expense": 35000,
-        "cash": 150000, "fd": 500000, "epf": 1200000, "mf": 200000, "sip": 15000, "housing": "Buy a Home"
-    },
-    "🔥 The Aggressive FIRE Chaser (Age 32, High Equity SIPs)": {
-        "age": 32, "retire_age": 45, "income": 250000, "rent": 40000, "living_expense": 60000,
-        "cash": 300000, "fd": 0, "epf": 800000, "mf": 2500000, "sip": 100000, "housing": "Rent Forever"
+    persona_options = [
+        "⚙️ Custom (I will enter my own numbers)",
+        "💻 The City Techie (High Income, High Rent)",
+        "🏔️ The Family (Stability & Safe Assets Focus)",
+        "🔥 The Aggressive FIRE Chaser (High Equity SIPs)"
+    ]
+
+    selected_persona = st.selectbox("Select a baseline profile to auto-fill the engine:", options=persona_options)
+
+    # 🇮🇳 INDIAN NUMBERS (Rupees)
+    personas_data = {
+        "💻 The City Techie (High Income, High Rent)": {
+            "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
+            "cash": 100000, "fd": 0, "epf": 300000, "mf": 800000, "sip": 40000, "housing": "Rent Forever"
+        },
+        "🏔️ The Family (Stability & Safe Assets Focus)": {
+            "age": 36, "retire_age": 60, "income": 90000, "rent": 15000, "living_expense": 35000,
+            "cash": 150000, "fd": 500000, "epf": 1200000, "mf": 200000, "sip": 15000, "housing": "Buy a Home"
+        },
+        "🔥 The Aggressive FIRE Chaser (High Equity SIPs)": {
+            "age": 32, "retire_age": 45, "income": 250000, "rent": 40000, "living_expense": 60000,
+            "cash": 300000, "fd": 0, "epf": 800000, "mf": 2500000, "sip": 100000, "housing": "Rent Forever"
+        }
     }
-}
+    default_custom = {
+        "age": 30, "retire_age": 60, "income": 100000, "rent": 20000, "living_expense": 30000,
+        "cash": 100000, "fd": 500000, "epf": 200000, "mf": 150000, "sip": 20000, "housing": "Rent Forever"
+    }
 
-# Fetch the numbers based on the dropdown
-p_data = personas_data.get(selected_persona, {
-    "age": 30, "retire_age": 60, "income": 100000, "rent": 20000, "living_expense": 30000,
-    "cash": 100000, "fd": 500000, "epf": 200000, "mf": 150000, "sip": 20000, "housing": "Rent Forever"
-})
+    # Fetch the numbers based on the dropdown
+    p_data = personas_data.get(selected_persona, default_custom)
+
+else:
+    # 🌎 GLOBAL DEFAULT NUMBERS (Fallback for all other currencies)
+    p_data = {
+        "age": 30, "retire_age": 60, "income": 5000, "rent": 1500, "living_expense": 2000,
+        "cash": 10000, "fd": 20000, "epf": 10000, "mf": 15000, "sip": 1000, "housing": "Rent Forever"
+    }
 
 st.divider()
 
@@ -144,14 +170,14 @@ with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False
     dependents = c3.number_input("Dependents", value=2, step=None)
     
     c4, c5, c6 = st.columns(3)
-    income = c4.number_input("Monthly In-hand (₹)", value=p_data["income"], step=None)
-    basic_salary = c5.number_input("Monthly Basic (₹)", value=int(p_data["income"]*0.4), step=None)
+    income = c4.number_input(f"Monthly In-hand ({sym})", value=p_data["income"], step=None)
+    basic_salary = c5.number_input(f"Monthly Basic ({sym})", value=int(p_data["income"]*0.4), step=None)
     monthly_pf_inflow = basic_salary * 0.24 
-    c6.info(f"✨ Auto-PF Inflow: ₹{monthly_pf_inflow:,.0f}/mo")
+    c6.info(f"✨ Auto-PF Inflow: {sym}{monthly_pf_inflow:,.0f}/mo")
 
     c7, c8, c9 = st.columns(3)
-    living_expense = c7.number_input("Living Exp. Excl. Rent (₹)", value=p_data["living_expense"], step=None)
-    rent = c8.number_input("Monthly Rent (₹)", value=p_data["rent"], step=None)
+    living_expense = c7.number_input(f"Living Exp. Excl. Rent ({sym})", value=p_data["living_expense"], step=None)
+    rent = c8.number_input(f"Monthly Rent ({sym})", value=p_data["rent"], step=None)
     total_monthly_expense = living_expense + rent
     
     tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
@@ -161,30 +187,30 @@ with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False
 # --- STEP 2: SAFETY & LIQUIDITY ---
 with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    cash = c1.number_input("Cash / Savings (₹)", value=p_data["cash"], step=None)
-    fd = c2.number_input("Fixed Deposits (₹)", value=p_data["fd"], step=None)
-    credit_limit = c3.number_input("Credit Card Limit (₹)", value=300000, step=None)
+    cash = c1.number_input(f"Cash / Savings ({sym})", value=p_data["cash"], step=None)
+    fd = c2.number_input(f"Fixed Deposits ({sym})", value=p_data["fd"], step=None)
+    credit_limit = c3.number_input(f"Credit Card Limit ({sym})", value=int(p_data["income"]*3), step=None)
     
     c4, c5, c6 = st.columns(3)
-    emi = c4.number_input("Monthly EMIs (₹)", value=0, step=None)
-    term_insurance = c5.number_input("Term Cover (₹)", value=5000000, step=None)
-    health_insurance = c6.number_input("Health Cover (₹)", value=500000, step=None)
+    emi = c4.number_input(f"Monthly EMIs ({sym})", value=0, step=None)
+    term_insurance = c5.number_input(f"Term Cover ({sym})", value=int(p_data["income"]*12*10), step=None)
+    health_insurance = c6.number_input(f"Health Cover ({sym})", value=int(p_data["income"]*12*2), step=None)
 
 # --- STEP 3: ASSETS ---
 with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    epf = c1.number_input("EPF / PPF (₹)", value=p_data["epf"], step=None)
-    mutual_funds = c2.number_input("Mutual Funds (₹)", value=p_data["mf"], step=None)
-    stocks = c3.number_input("Direct Stocks (₹)", value=50000, step=None)
+    epf = c1.number_input(f"EPF / PPF ({sym})", value=p_data["epf"], step=None)
+    mutual_funds = c2.number_input(f"Mutual Funds ({sym})", value=p_data["mf"], step=None)
+    stocks = c3.number_input(f"Direct Stocks ({sym})", value=int(p_data["mf"]*0.3), step=None)
     
     c4, c5, _ = st.columns(3)
-    gold = c4.number_input("Gold (₹)", value=50000, step=None)
-    arbitrage = c5.number_input("Arbitrage Funds (₹)", value=50000, step=None)
+    gold = c4.number_input(f"Gold ({sym})", value=int(p_data["mf"]*0.1), step=None)
+    arbitrage = c5.number_input(f"Arbitrage Funds ({sym})", value=0, step=None)
 
 # --- STEP 4: STRATEGY & ASSUMPTIONS ---
 with st.expander("4️⃣ Strategy & Growth Assumptions (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    current_sip = c1.number_input("Current SIP (₹)", value=p_data["sip"], step=None)
+    current_sip = c1.number_input(f"Current SIP ({sym})", value=p_data["sip"], step=None)
     step_up_pct = c2.slider("Annual SIP Step-Up (%)", 0, 20, 10) 
     step_up = step_up_pct / 100
     swr = c3.number_input("Safe Withdrawal Rate (%)", value=4.0, step=0.1) / 100
@@ -193,18 +219,19 @@ with st.expander("4️⃣ Strategy & Growth Assumptions (Please Update)", expand
     h_options = ["Rent Forever", "Buy a Home", "Already Own"]
     h_index = h_options.index(p_data["housing"])
     housing_goal = c4.selectbox("Housing Plan", options=h_options, index=h_index)
-    house_cost = c5.number_input("Future House Budget (₹)", value=5000000, step=None)
-    inflation = c6.number_input("General Inflation (%)", value=6.0, step=0.5) / 100
+    house_cost_default = 5000000 if is_inr else 350000
+    house_cost = c5.number_input(f"Future House Budget ({sym})", value=house_cost_default, step=None)
+    inflation = c6.number_input("General Inflation (%)", value=6.0 if is_inr else 3.0, step=0.5) / 100
     
     st.markdown("**Expected Returns (%)**")
     r1, r2, r3, r4, r5, r6 = st.columns(6)
     rate_new_sip = r1.number_input("SIP", value=12.0) / 100
-    rate_fd = r2.number_input("FD", value=7.0) / 100
-    rate_epf = r3.number_input("EPF", value=8.1) / 100
+    rate_fd = r2.number_input("FD", value=7.0 if is_inr else 4.0) / 100
+    rate_epf = r3.number_input("EPF", value=8.1 if is_inr else 6.0) / 100
     rate_equity = r4.number_input("Equity", value=12.0) / 100
-    rate_gold = r5.number_input("Gold", value=8.0) / 100
-    rate_arbitrage = r6.number_input("Arbitrage", value=7.5) / 100
-    rent_inflation = 0.08
+    rate_gold = r5.number_input("Gold", value=8.0 if is_inr else 5.0) / 100
+    rate_arbitrage = r6.number_input("Arbitrage", value=7.5 if is_inr else 4.5) / 100
+    rent_inflation = 0.08 if is_inr else 0.04
 
 st.divider()
 
@@ -249,10 +276,10 @@ diagnostics = logic.run_diagnostics(user_data_logic)
 arbitrage_advice = logic.check_arbitrage_hack(user_data_logic)
 
 m1, m2, m3, m4 = st.columns(4)
-m1.metric("Monthly Surplus", f"₹{income - total_monthly_expense - current_sip - emi:,}")
-m2.metric("Liquid Safety", f"₹{cash + fd + credit_limit:,}")
+m1.metric("Monthly Surplus", f"{sym}{income - total_monthly_expense - current_sip - emi:,}")
+m2.metric("Liquid Safety", f"{sym}{cash + fd + credit_limit:,}")
 m3.metric("Housing Plan", housing_goal)
-m4.metric("PF Inflow (Auto)", f"₹{monthly_pf_inflow:,.0f}")
+m4.metric("PF Inflow (Auto)", f"{sym}{monthly_pf_inflow:,.0f}")
 
 st.subheader("🚦 Financial Health Check")
 def render_card(col, res, title):
@@ -307,12 +334,17 @@ else:
     view_x_domain = [age, 100]
     view_y_domain = [0, max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1]
 
-indian_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
+# Format chart labels based on Region
+if is_inr:
+    chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
+else:
+    chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
+
 base = alt.Chart(df).encode(x=alt.X('Age', scale=alt.Scale(domain=view_x_domain), axis=alt.Axis(format='d')))
 nearest = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
 
 line_wealth = base.mark_line(color='#00FF00', strokeWidth=3).encode(
-    y=alt.Y('Projected Wealth', scale=alt.Scale(domain=view_y_domain), axis=alt.Axis(labelExpr=indian_fmt, title='Amount (₹)'))
+    y=alt.Y('Projected Wealth', scale=alt.Scale(domain=view_y_domain), axis=alt.Axis(labelExpr=chart_fmt, title=f'Amount ({sym})'))
 )
 line_req = base.mark_line(color='#FF0000', strokeDash=[5, 5]).encode(y='Required Corpus')
 
@@ -320,9 +352,9 @@ selectors = base.mark_point().encode(
     opacity=alt.value(0),
     tooltip=[
         alt.Tooltip('Age', title='Age'),
-        alt.Tooltip('Projected Wealth', format=',.0f', title='Wealth (₹)'),
-        alt.Tooltip('Required Corpus', format=',.0f', title='Target (₹)'),
-        alt.Tooltip('Gap', format=',.0f', title='Surplus/Gap (₹)')
+        alt.Tooltip('Projected Wealth', format=',.0f', title=f'Wealth ({sym})'),
+        alt.Tooltip('Required Corpus', format=',.0f', title=f'Target ({sym})'),
+        alt.Tooltip('Gap', format=',.0f', title=f'Surplus/Gap ({sym})')
     ]
 ).add_params(nearest)
 
@@ -340,12 +372,18 @@ gap_val = target_row['Gap']
 col_v1, col_v2 = st.columns(2)
 with col_v1:
     st.markdown(f"### 🎯 Goal: Retire at {retire_age}")
-    if gap_val >= 0:
-        st.success(f"✅ **POSSIBLE**\nSurplus at {retire_age}: **₹{gap_val/10000000:.2f} Cr**")
+    
+    if is_inr:
+        formatted_gap = f"{sym}{abs(gap_val)/10000000:.2f} Cr"
     else:
-        st.error(f"❌ **SHORTFALL**\nGap at {retire_age}: **₹{abs(gap_val)/10000000:.2f} Cr**")
+        formatted_gap = f"{sym}{abs(gap_val)/1000000:.2f} M"
+
+    if gap_val >= 0:
+        st.success(f"✅ **POSSIBLE**\nSurplus at {retire_age}: **{formatted_gap}**")
+    else:
+        st.error(f"❌ **SHORTFALL**\nGap at {retire_age}: **{formatted_gap}**")
         extra_sip_req = calculator.solve_extra_sip_needed(abs(gap_val), retire_age - age, eff_sip, step_up)
-        st.info(f"💡 **The Fix:** Start an additional SIP of **₹{int(extra_sip_req):,}** / month.")
+        st.info(f"💡 **The Fix:** Start an additional SIP of **{sym}{int(extra_sip_req):,}** / month.")
 
 with col_v2:
     st.markdown("### 📅 Practical Reality")
