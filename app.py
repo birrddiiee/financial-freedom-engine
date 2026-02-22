@@ -10,32 +10,43 @@ import calculator
 st.set_page_config(page_title="Financial Freedom Engine", page_icon="🚀", layout="wide")
 
 # ==========================================
-# 🎨 CUSTOM CSS FOR MOBILE RESPONSIVENESS
+# 🎨 CUSTOM CSS FOR UI & MOBILE RESPONSIVENESS
 # ==========================================
-mobile_css = """
+custom_css = """
 <style>
-    /* This rule only activates on screens smaller than 768px (Mobile/Tablet) */
+    /* --- HIDE STREAMLIT NUMBER INPUT +/- BUTTONS --- */
+    [data-testid="stNumberInputStepDown"] { display: none !important; }
+    [data-testid="stNumberInputStepUp"] { display: none !important; }
+    
+    /* --- HIDE NATIVE BROWSER SPIN BUTTONS --- */
+    input[type="number"]::-webkit-inner-spin-button, 
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none !important;
+        margin: 0 !important;
+    }
+    input[type="number"] {
+        -moz-appearance: textfield !important;
+    }
+
+    /* --- MOBILE RESPONSIVENESS --- */
     @media (max-width: 768px) {
-        /* Shrink main paragraphs, labels, and text */
         .stMarkdown p, .stText, label {
             font-size: 0.85rem !important;
         }
-        /* Shrink the big Metric numbers (like Net Worth) */
         [data-testid="stMetricValue"] > div {
             font-size: 1.5rem !important;
         }
-        /* Shrink the expander titles (1️⃣ Core Profile...) */
         .streamlit-expanderHeader {
             font-size: 0.9rem !important;
         }
-        /* Shrink Headers */
         h1 { font-size: 1.8rem !important; }
         h2 { font-size: 1.4rem !important; }
         h3 { font-size: 1.1rem !important; }
     }
 </style>
 """
-st.markdown(mobile_css, unsafe_allow_html=True)
+st.markdown(custom_css, unsafe_allow_html=True)
+
 # ==========================================
 # 📊 GOOGLE ANALYTICS (GA4) 
 # ==========================================
@@ -73,78 +84,116 @@ def init_connection():
 
 supabase = init_connection()
 
+# Initialize Session State Variables
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
+if 'has_interacted' not in st.session_state:
+    st.session_state['has_interacted'] = False
 
 # ==========================================
-# 🖥️ MAIN UI: TITLE & INSTANT GRATIFICATION
+# 🖥️ MAIN UI: TITLE & PERSONAS
 # ==========================================
-st.title("🇮🇳 Financial Freedom Engine (🔒 100% Anonymous)")
-st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**.")
+st.title("🇮🇳 Financial Freedom Engine")
+st.markdown("Adjust your parameters below. Your 100-year wealth projection will update **instantly**.")
+
+# 👤 PERSONA TEMPLATES (TIERED DROPDOWN)
+st.markdown("### ⚡ Quick Start: Choose a Profile")
+
+persona_options = [
+    "⚙️ Custom (I will enter my own numbers)",
+    "💻 The City Techie (Age 28, High Income, High Rent)",
+    "🏔️ The Tier-2 Family (Age 36, Stability & EPF Focus)",
+    "🔥 The Aggressive FIRE Chaser (Age 32, High Equity SIPs)"
+]
+
+selected_persona = st.selectbox("Select a baseline profile to auto-fill the engine:", options=persona_options)
+
+personas_data = {
+    "💻 The City Techie (Age 28, High Income, High Rent)": {
+        "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
+        "cash": 100000, "fd": 0, "epf": 300000, "mf": 800000, "sip": 40000, "housing": "Rent Forever"
+    },
+    "🏔️ The Tier-2 Family (Age 36, Stability & EPF Focus)": {
+        "age": 36, "retire_age": 60, "income": 90000, "rent": 15000, "living_expense": 35000,
+        "cash": 150000, "fd": 500000, "epf": 1200000, "mf": 200000, "sip": 15000, "housing": "Buy a Home"
+    },
+    "🔥 The Aggressive FIRE Chaser (Age 32, High Equity SIPs)": {
+        "age": 32, "retire_age": 45, "income": 250000, "rent": 40000, "living_expense": 60000,
+        "cash": 300000, "fd": 0, "epf": 800000, "mf": 2500000, "sip": 100000, "housing": "Rent Forever"
+    }
+}
+
+# Fetch the numbers based on the dropdown
+p_data = personas_data.get(selected_persona, {
+    "age": 30, "retire_age": 60, "income": 100000, "rent": 20000, "living_expense": 30000,
+    "cash": 100000, "fd": 500000, "epf": 200000, "mf": 150000, "sip": 20000, "housing": "Rent Forever"
+})
+
+st.divider()
 
 # ==========================================
-# 🎛️ MAIN PAGE INPUT PANEL (NO MORE SIDEBAR!)
+# 🎛️ MAIN PAGE INPUT PANEL
 # ==========================================
 
-# --- STEP 1: USER PROFILE (Open by default) ---
-with st.expander("1️⃣ Core Profile & Income", expanded=False):
+# --- STEP 1: USER PROFILE ---
+with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    age = c1.number_input("Current Age", value=30, min_value=18, max_value=100, step=1)
-    default_retire = max(60, age)
-    retire_age = c2.number_input("Retirement Age", value=default_retire, min_value=age, max_value=100, step=1)
-    dependents = c3.number_input("Dependents", value=2, step=1)
+    age = c1.number_input("Current Age", value=p_data["age"], min_value=18, max_value=100, step=None)
+    default_retire = max(p_data["retire_age"], age)
+    retire_age = c2.number_input("Retirement Age", value=default_retire, min_value=age, max_value=100, step=None)
+    dependents = c3.number_input("Dependents", value=2, step=None)
     
     c4, c5, c6 = st.columns(3)
-    income = c4.number_input("Monthly In-hand (₹)", value=100000, step=5000)
-    basic_salary = c5.number_input("Monthly Basic (₹)", value=40000, step=1000)
+    income = c4.number_input("Monthly In-hand (₹)", value=p_data["income"], step=None)
+    basic_salary = c5.number_input("Monthly Basic (₹)", value=int(p_data["income"]*0.4), step=None)
     monthly_pf_inflow = basic_salary * 0.24 
     c6.info(f"✨ Auto-PF Inflow: ₹{monthly_pf_inflow:,.0f}/mo")
 
     c7, c8, c9 = st.columns(3)
-    living_expense = c7.number_input("Living Exp. Excl. Rent (₹)", value=30000, step=1000)
-    rent = c8.number_input("Monthly Rent (₹)", value=20000, step=1000)
+    living_expense = c7.number_input("Living Exp. Excl. Rent (₹)", value=p_data["living_expense"], step=None)
+    rent = c8.number_input("Monthly Rent (₹)", value=p_data["rent"], step=None)
     total_monthly_expense = living_expense + rent
     
     tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30]
-    # Changed index to 6 so it still defaults to 30%, or change to 0 to default to 0%
     tax_slab = c9.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
     use_post_tax = st.toggle("Calculate Post-Tax Returns?", value=True)
 
 # --- STEP 2: SAFETY & LIQUIDITY ---
-with st.expander("2️⃣ Safety Net & Insurance", expanded=False):
+with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    cash = c1.number_input("Cash / Savings (₹)", value=100000, step=10000)
-    fd = c2.number_input("Fixed Deposits (₹)", value=500000, step=10000)
-    credit_limit = c3.number_input("Credit Card Limit (₹)", value=300000, step=10000)
+    cash = c1.number_input("Cash / Savings (₹)", value=p_data["cash"], step=None)
+    fd = c2.number_input("Fixed Deposits (₹)", value=p_data["fd"], step=None)
+    credit_limit = c3.number_input("Credit Card Limit (₹)", value=300000, step=None)
     
     c4, c5, c6 = st.columns(3)
-    emi = c4.number_input("Monthly EMIs (₹)", value=0, step=1000)
-    term_insurance = c5.number_input("Term Cover (₹)", value=5000000, step=500000)
-    health_insurance = c6.number_input("Health Cover (₹)", value=500000, step=100000)
+    emi = c4.number_input("Monthly EMIs (₹)", value=0, step=None)
+    term_insurance = c5.number_input("Term Cover (₹)", value=5000000, step=None)
+    health_insurance = c6.number_input("Health Cover (₹)", value=500000, step=None)
 
 # --- STEP 3: ASSETS ---
-with st.expander("3️⃣ Current Investments", expanded=False):
+with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    epf = c1.number_input("EPF / PPF (₹)", value=200000, step=10000)
-    mutual_funds = c2.number_input("Mutual Funds (₹)", value=150000, step=10000)
-    stocks = c3.number_input("Direct Stocks (₹)", value=50000, step=10000)
+    epf = c1.number_input("EPF / PPF (₹)", value=p_data["epf"], step=None)
+    mutual_funds = c2.number_input("Mutual Funds (₹)", value=p_data["mf"], step=None)
+    stocks = c3.number_input("Direct Stocks (₹)", value=50000, step=None)
     
     c4, c5, _ = st.columns(3)
-    gold = c4.number_input("Gold (₹)", value=50000, step=10000)
-    arbitrage = c5.number_input("Arbitrage Funds (₹)", value=50000, step=10000)
+    gold = c4.number_input("Gold (₹)", value=50000, step=None)
+    arbitrage = c5.number_input("Arbitrage Funds (₹)", value=50000, step=None)
 
 # --- STEP 4: STRATEGY & ASSUMPTIONS ---
-with st.expander("4️⃣ Strategy & Growth Assumptions", expanded=False):
+with st.expander("4️⃣ Strategy & Growth Assumptions (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
-    current_sip = c1.number_input("Current SIP (₹)", value=20000, step=1000)
+    current_sip = c1.number_input("Current SIP (₹)", value=p_data["sip"], step=None)
     step_up_pct = c2.slider("Annual SIP Step-Up (%)", 0, 20, 10) 
     step_up = step_up_pct / 100
     swr = c3.number_input("Safe Withdrawal Rate (%)", value=4.0, step=0.1) / 100
 
     c4, c5, c6 = st.columns(3)
     h_options = ["Rent Forever", "Buy a Home", "Already Own"]
-    housing_goal = c4.selectbox("Housing Plan", options=h_options, index=0)
-    house_cost = c5.number_input("Future House Budget (₹)", value=5000000, step=500000)
+    h_index = h_options.index(p_data["housing"])
+    housing_goal = c4.selectbox("Housing Plan", options=h_options, index=h_index)
+    house_cost = c5.number_input("Future House Budget (₹)", value=5000000, step=None)
     inflation = c6.number_input("General Inflation (%)", value=6.0, step=0.5) / 100
     
     st.markdown("**Expected Returns (%)**")
@@ -155,33 +204,39 @@ with st.expander("4️⃣ Strategy & Growth Assumptions", expanded=False):
     rate_equity = r4.number_input("Equity", value=12.0) / 100
     rate_gold = r5.number_input("Gold", value=8.0) / 100
     rate_arbitrage = r6.number_input("Arbitrage", value=7.5) / 100
-    rent_inflation = 0.08 # Set statically to save space, or you can add it back
+    rent_inflation = 0.08
 
 st.divider()
 
 # ==========================================
-# 🚀 LIVE DASHBOARD (Calculates Instantly)
+# 🚀 LIVE DASHBOARD & CALCULATIONS
 # ==========================================
 
 total_liq = cash + fd + credit_limit
 net_worth = cash + fd + epf + mutual_funds + stocks + gold + arbitrage
 
-# DATABASE AUTO-SAVE
-data_payload = {
-    "id": st.session_state['user_id'], "age": age, "retire_age": retire_age, "dependents": dependents,
-    "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
-    "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
-    "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
-    "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage,
-    "current_sip": current_sip, "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost,
-    "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "rate_new_sip": rate_new_sip,
-    "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
-    "rate_arbitrage": rate_arbitrage, "total_liquidity": total_liq, "net_worth": net_worth
-}
-try:
-    supabase.table("user_data").upsert(data_payload).execute()
-except Exception as e:
-    pass 
+# ==========================================
+# 💾 DATABASE AUTO-SAVE (GATEKEEPER)
+# ==========================================
+if st.session_state.get('has_interacted', False):
+    data_payload = {
+        "id": st.session_state['user_id'], "age": age, "retire_age": retire_age, "dependents": dependents,
+        "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
+        "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
+        "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
+        "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage,
+        "current_sip": current_sip, "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost,
+        "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "rate_new_sip": rate_new_sip,
+        "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
+        "rate_arbitrage": rate_arbitrage, "total_liquidity": total_liq, "net_worth": net_worth
+    }
+    try:
+        supabase.table("user_data").upsert(data_payload).execute()
+    except Exception as e:
+        pass 
+else:
+    st.session_state['has_interacted'] = True
+
 
 # RUN DIAGNOSTICS & SIMULATION
 user_data_logic = {
@@ -304,4 +359,19 @@ with col_v2:
     if arbitrage_advice['action'] == "SWITCH":
         st.info(f"💡 **Tax Tip:** {arbitrage_advice['msg']}")
 
-feedback_text = st.text_area("Optional: Any feature requests or suggestions? Don't worry, it is anonymous.", max_chars=3000)
+# ==========================================
+# 🗣️ USER FEEDBACK SUBMISSION
+# ==========================================
+st.divider()
+st.subheader("💡 Help Improve the Engine")
+feedback_text = st.text_area("Optional: Any feature requests, bugs, or suggestions? Don't worry, it is anonymous.", max_chars=3000)
+
+if st.button("📤 Submit Feedback", type="primary"):
+    if feedback_text.strip():
+        try:
+            supabase.table("user_data").update({"feedback": feedback_text}).eq("id", st.session_state['user_id']).execute()
+            st.success("Thank you! Your feedback has been securely submitted. ✅")
+        except Exception as e:
+            st.error(f"🚨 Could not submit feedback: {e}")
+    else:
+        st.warning("Please type some feedback before clicking submit!")
