@@ -232,7 +232,7 @@ with tab1:
     
     age = c1.number_input("Current Age", value=p_data["age"], min_value=18, max_value=100, step=None)
     default_retire = max(p_data["retire_age"], age)
-    retire_age = c2.number_input("Retire Age", value=default_retire, min_value=18, max_value=100, step=None)
+    retire_age = c2.number_input("Retirement Age", value=default_retire, min_value=18, max_value=100, step=None)
     dependents = c3.number_input("Dependents", value=2, step=None)
 
     if retire_age < age:
