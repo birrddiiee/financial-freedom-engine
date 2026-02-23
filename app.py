@@ -167,7 +167,7 @@ with col_settings:
 
 with col_title:
     st.title(f"{flag} Financial Freedom Engine")
-    st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**.")
+    st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**. Works best in Desktop or landscape orientation in mobile.")
 
 # ==========================================
 # 👤 PERSONA TEMPLATES (SIDE-BY-SIDE LAYOUT)
