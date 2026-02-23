@@ -140,15 +140,14 @@ def init_connection():
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-try:
-    supabase = init_connection()
-except Exception as e:
-    supabase = None
+supabase = init_connection()
 
+# Initialize Session State Variables
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
 if 'has_interacted' not in st.session_state:
     st.session_state['has_interacted'] = False
+
 
 # ==========================================
 # 🖥️ MAIN UI: TITLE & SETTINGS
