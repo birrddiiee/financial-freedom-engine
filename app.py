@@ -372,7 +372,7 @@ if st.session_state.get('has_interacted', False):
         try:
             supabase.table("user_data").upsert(data_payload).execute()
         except Exception as e:
-            st.error(f"DB Error: {e}") 
+            pass 
 else:
     st.session_state['has_interacted'] = True
 
