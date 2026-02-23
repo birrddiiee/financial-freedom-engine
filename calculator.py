@@ -44,6 +44,8 @@ def generate_forecast(data):
             calculate_future_value(data['cash'], data['rate_savings'], y) +
             calculate_future_value(data['fd'], data['rate_fd'], y) +
             calculate_future_value(data['epf'], data['rate_epf'], y) +
+            # 🆕 THE FIX: Added Fixed Income calculation so Bonds/T-Bills compound properly
+            calculate_future_value(data.get('fixed_income', 0), data.get('rate_fixed', 0.0), y) +
             calculate_future_value(data['mutual_funds'] + data['stocks'], data['rate_equity'], y) +
             calculate_future_value(data['gold'], data['rate_gold'], y) +
             calculate_future_value(data['arbitrage'], data['rate_arbitrage'], y) +
