@@ -40,82 +40,80 @@ def fmt_curr(num, symbol, is_inr_mode):
 custom_css = """
 <style>
     /* --- HIDE STREAMLIT NUMBER INPUT +/- BUTTONS --- */
-    [data-testid="stNumberInputStepDown"] { display: none !important; }
+    [data-testid="stNumberInputStepDown"], 
     [data-testid="stNumberInputStepUp"] { display: none !important; }
     
-    /* --- HIDE NATIVE BROWSER SPIN BUTTONS --- */
     input[type="number"]::-webkit-inner-spin-button, 
     input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none !important;
-        margin: 0 !important;
+        -webkit-appearance: none !important; margin: 0 !important;
     }
-    input[type="number"] {
-        -moz-appearance: textfield !important;
-    }
+    input[type="number"] { -moz-appearance: textfield !important; }
 
     /* --- MINIMALIST INPUT FIELDS --- */
     div[data-baseweb="input"] > div {
-        height: 38px !important;       
-        border-radius: 4px !important; 
+        height: 38px !important; border-radius: 4px !important; 
     }
     div[data-baseweb="input"] input {
-        padding: 4px 8px !important;   
-        font-size: 0.9rem !important;  
+        padding: 4px 8px !important; font-size: 0.9rem !important;  
     }
     .stNumberInput label {
-        font-size: 0.85rem !important; 
-        font-weight: 500 !important;   
+        font-size: 0.85rem !important; font-weight: 500 !important;   
         padding-bottom: 2px !important;
     }
     .stTooltipIcon { display: none !important; }
 
     /* --- CAPTION FORMATTING --- */
     [data-testid="stCaptionContainer"] {
-        margin-top: -10px !important;
-        margin-bottom: 10px !important;
+        margin-top: -10px !important; margin-bottom: 10px !important;
         color: #00FF00 !important; 
+    }
+
+    /* --- BUG FIX: STUCK ALTAIR TOOLTIP ON MOBILE --- */
+    #vg-tooltip-element {
+        pointer-events: none !important; /* Lets you scroll right through it */
+        z-index: 9999 !important;
     }
 
     /* --- EVENLY SPACED TABS (MOBILE FRIENDLY) --- */
     div[data-testid="stTabs"] > div[data-baseweb="tab-list"] {
-        display: flex !important;
-        width: 100% !important;
+        display: flex !important; width: 100% !important;
     }
     div[data-testid="stTabs"] button[data-baseweb="tab"] {
-        flex: 1 !important; 
-        justify-content: center !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        flex: 1 !important; justify-content: center !important;
+        padding-left: 0 !important; padding-right: 0 !important;
     }
     div[data-testid="stTabs"] button[data-baseweb="tab"] p {
-        font-size: 0.95rem !important;
-        font-weight: 600 !important;
+        font-size: 0.95rem !important; font-weight: 600 !important;
     }
 
-    /* --- MOBILE RESPONSIVENESS & TRUE 2-COLUMN GRID --- */
+    /* --- TRUE 2-COLUMN MOBILE GRID OVERRIDE --- */
     @media (max-width: 768px) {
+        /* Scale down fonts */
         .stMarkdown p, .stText, label { font-size: 0.85rem !important; }
         [data-testid="stMetricValue"] > div { font-size: 1.5rem !important; }
         h1 { font-size: 1.8rem !important; }
-        h2 { font-size: 1.4rem !important; }
-        h3 { font-size: 1.1rem !important; }
         div[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: 0.75rem !important; }
 
-        /* 1. Force the row to wrap and space items evenly */
-        div[data-testid="stHorizontalBlock"] {
+        /* Force Streamlit horizontal blocks to wrap like a grid */
+        [data-testid="stHorizontalBlock"] {
+            display: flex !important;
             flex-direction: row !important;
             flex-wrap: wrap !important;
-            justify-content: space-between !important;
-            gap: 0px !important; /* Disable default Streamlit gap */
+            gap: 0px !important;
         }
         
-        /* 2. Lock the columns to exactly 48% with a bottom margin for vertical spacing */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            width: 48% !important; 
-            min-width: 48% !important;
-            max-width: 48% !important; 
+        /* Force every column to exactly 48% width to override React inline styles */
+        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
+            width: 48% !important;
             flex: 1 1 48% !important;
-            margin-bottom: 15px !important;
+            min-width: 48% !important;
+            max-width: 48% !important;
+            margin-right: 4% !important; /* Creates the gap between the two boxes */
+        }
+
+        /* Remove the right margin on every 2nd column so it doesn't break the row */
+        [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2n) {
+            margin-right: 0 !important;
         }
     }
 </style>
