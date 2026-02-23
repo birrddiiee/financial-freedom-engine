@@ -352,7 +352,7 @@ with tab4:
     rate_equity = r4.number_input("Equity", value=12.0) / 100
     rate_gold = r5.number_input("Gold", value=8.0 if is_inr else 5.0) / 100
     rate_arbitrage = r6.number_input("Arbitrage", value=7.5 if is_inr else 4.5) / 100
-    rate_fixed = r7.number_input("Bonds", value=7.5 if is_inr else 4.5) / 100
+    rate_fixed = r7.number_input("Fixed Income(like Bonds)", value=7.5 if is_inr else 4.5) / 100
     
     rent_inflation = 0.08 if is_inr else 0.04
 
@@ -491,7 +491,7 @@ rules = base.mark_rule(color='gray').encode(
     opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
 ).transform_filter(nearest)
 
-st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), width="stretch")
+st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), use_container_width=True)
 
 st.divider()
 target_row = df[df['Age'] == safe_retire_age].iloc[0]
