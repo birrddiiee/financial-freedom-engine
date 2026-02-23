@@ -337,7 +337,7 @@ with tab4:
     rate_equity = r4.number_input("Equity", value=12.0) / 100
     rate_gold = r5.number_input("Gold", value=8.0 if is_inr else 5.0) / 100
     rate_arbitrage = r6.number_input("Arbitrage", value=7.5 if is_inr else 4.5) / 100
-    rate_fixed = r7.number_input("Bonds", value=7.5 if is_inr else 4.5) / 100
+    rate_fixed = r7.number_input("Fixed Income(like Bonds)", value=7.5 if is_inr else 4.5) / 100
     
     rent_inflation = 0.08 if is_inr else 0.04
 
