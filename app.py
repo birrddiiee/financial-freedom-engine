@@ -92,7 +92,7 @@ custom_css = """
         font-weight: 600 !important;
     }
 
-    /* --- MOBILE RESPONSIVENESS --- */
+    /* --- MOBILE RESPONSIVENESS & 2-COLUMN GRID --- */
     @media (max-width: 768px) {
         .stMarkdown p, .stText, label { font-size: 0.85rem !important; }
         [data-testid="stMetricValue"] > div { font-size: 1.5rem !important; }
@@ -100,6 +100,21 @@ custom_css = """
         h2 { font-size: 1.4rem !important; }
         h3 { font-size: 1.1rem !important; }
         div[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: 0.75rem !important; }
+
+        /* Force Streamlit columns to stay side-by-side on mobile */
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+            gap: 2% !important; 
+        }
+        
+        /* Force each column to take up exactly half the screen */
+        [data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+            width: 49% !important; 
+            min-width: 49% !important;
+            flex: 1 1 49% !important;
+            padding-bottom: 5px !important;
+        }
     }
 </style>
 """
