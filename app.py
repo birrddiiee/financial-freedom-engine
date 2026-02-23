@@ -40,81 +40,50 @@ def fmt_curr(num, symbol, is_inr_mode):
 custom_css = """
 <style>
     /* --- HIDE STREAMLIT NUMBER INPUT +/- BUTTONS --- */
-    [data-testid="stNumberInputStepDown"], 
+    [data-testid="stNumberInputStepDown"] { display: none !important; }
     [data-testid="stNumberInputStepUp"] { display: none !important; }
     
+    /* --- HIDE NATIVE BROWSER SPIN BUTTONS --- */
     input[type="number"]::-webkit-inner-spin-button, 
     input[type="number"]::-webkit-outer-spin-button {
-        -webkit-appearance: none !important; margin: 0 !important;
+        -webkit-appearance: none !important;
+        margin: 0 !important;
     }
-    input[type="number"] { -moz-appearance: textfield !important; }
+    input[type="number"] {
+        -moz-appearance: textfield !important;
+    }
 
     /* --- MINIMALIST INPUT FIELDS --- */
     div[data-baseweb="input"] > div {
-        height: 38px !important; border-radius: 4px !important; 
+        height: 38px !important;       
+        border-radius: 4px !important; 
     }
     div[data-baseweb="input"] input {
-        padding: 4px 8px !important; font-size: 0.9rem !important;  
+        padding: 4px 8px !important;   
+        font-size: 0.9rem !important;  
     }
     .stNumberInput label {
-        font-size: 0.85rem !important; font-weight: 500 !important;   
+        font-size: 0.85rem !important; 
+        font-weight: 500 !important;   
         padding-bottom: 2px !important;
     }
     .stTooltipIcon { display: none !important; }
 
     /* --- CAPTION FORMATTING --- */
     [data-testid="stCaptionContainer"] {
-        margin-top: -10px !important; margin-bottom: 10px !important;
-        color: #00FF00 !important; 
+        margin-top: -10px !important;
+        margin-bottom: 10px !important;
+        color: #00FF00 !important; /* Optional: gives a nice subtle green confirmation */
     }
 
-    /* --- BUG FIX: STUCK ALTAIR TOOLTIP ON MOBILE --- */
-    #vg-tooltip-element {
-        pointer-events: none !important; /* Lets you scroll right through it */
-        z-index: 9999 !important;
-    }
-
-    /* --- EVENLY SPACED TABS (MOBILE FRIENDLY) --- */
-    div[data-testid="stTabs"] > div[data-baseweb="tab-list"] {
-        display: flex !important; width: 100% !important;
-    }
-    div[data-testid="stTabs"] button[data-baseweb="tab"] {
-        flex: 1 !important; justify-content: center !important;
-        padding-left: 0 !important; padding-right: 0 !important;
-    }
-    div[data-testid="stTabs"] button[data-baseweb="tab"] p {
-        font-size: 0.95rem !important; font-weight: 600 !important;
-    }
-
-    /* --- TRUE 2-COLUMN MOBILE GRID OVERRIDE --- */
+    /* --- MOBILE RESPONSIVENESS --- */
     @media (max-width: 768px) {
-        /* Scale down fonts */
         .stMarkdown p, .stText, label { font-size: 0.85rem !important; }
         [data-testid="stMetricValue"] > div { font-size: 1.5rem !important; }
+        .streamlit-expanderHeader { font-size: 0.9rem !important; }
         h1 { font-size: 1.8rem !important; }
-        div[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: 0.75rem !important; }
-
-        /* Force Streamlit horizontal blocks to wrap like a grid */
-        [data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: wrap !important;
-            gap: 0px !important;
-        }
-        
-        /* Force every column to exactly 48% width to override React inline styles */
-        [data-testid="stHorizontalBlock"] > [data-testid="column"] {
-            width: 48% !important;
-            flex: 1 1 48% !important;
-            min-width: 48% !important;
-            max-width: 48% !important;
-            margin-right: 4% !important; /* Creates the gap between the two boxes */
-        }
-
-        /* Remove the right margin on every 2nd column so it doesn't break the row */
-        [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2n) {
-            margin-right: 0 !important;
-        }
+        h2 { font-size: 1.4rem !important; }
+        h3 { font-size: 1.1rem !important; }
     }
 </style>
 """
@@ -155,11 +124,9 @@ def init_connection():
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-try:
-    supabase = init_connection()
-except Exception as e:
-    supabase = None
+supabase = init_connection()
 
+# Initialize Session State Variables
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
 if 'has_interacted' not in st.session_state:
@@ -182,14 +149,17 @@ with col_settings:
 
 with col_title:
     st.title(f"{flag} Financial Freedom Engine")
-    st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**. Works best in Desktop or landscape orientation in mobile.")
+    st.markdown("Adjust your parameters below in four sections. Your wealth projection will update **instantly**.")
 
 # ==========================================
-# 👤 PERSONA TEMPLATES (SIDE-BY-SIDE LAYOUT)
+# 👤 PERSONA TEMPLATES 
 # ==========================================
 if is_inr:
+    # 1. Use columns to place the label and dropdown side-by-side
     col_label, col_dropdown = st.columns([1, 2])
+    
     with col_label:
+        # Add a slight top margin so the text aligns nicely with the middle of the box
         st.markdown("<p style='margin-top: 8px; font-weight: 600;'>⚡ Quick Start: Choose a Profile</p>", unsafe_allow_html=True)
 
     with col_dropdown:
@@ -199,8 +169,14 @@ if is_inr:
             "🏔️ The Family (Stability & Safe Assets Focus)",
             "🔥 The Aggressive FIRE Chaser (High Equity SIPs)"
         ]
-        selected_persona = st.selectbox("persona_select", options=persona_options, label_visibility="collapsed")
+        # 2. Collapse the default label so it doesn't stack vertically
+        selected_persona = st.selectbox(
+            "persona_select", 
+            options=persona_options, 
+            label_visibility="collapsed"
+        )
 
+    # 🇮🇳 INDIAN NUMBERS (Rupees)
     personas_data = {
         "💻 The City Techie (High Income, High Rent)": {
             "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
@@ -231,23 +207,17 @@ else:
 st.divider()
 
 # ==========================================
-# 🎛️ MAIN PAGE INPUT PANEL (TABBED NAVIGATION)
+# 🎛️ MAIN PAGE INPUT PANEL
 # ==========================================
 
-tab1, tab2, tab3, tab4 = st.tabs([
-    "1️⃣ Profile", 
-    "2️⃣ Safety", 
-    "3️⃣ Assets", 
-    "4️⃣ Strategy"
-])
-
-# --- TAB 1: USER PROFILE ---
-with tab1:
-    c1, c2, c3 = st.columns(3) # 🆕 PERFECT VERTICAL SYMMETRY FOR ALL ROWS
+# --- STEP 1: USER PROFILE ---
+with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False):
+    # Minimalist asymmetrical columns for Age row
+    c1, c2, c3, _ = st.columns([1, 1.2, 1, 3]) 
     
     age = c1.number_input("Current Age", value=p_data["age"], min_value=18, max_value=100, step=None)
     default_retire = max(p_data["retire_age"], age)
-    retire_age = c2.number_input("Retirement Age", value=default_retire, min_value=18, max_value=100, step=None)
+    retire_age = c2.number_input("Retire Age", value=default_retire, min_value=18, max_value=100, step=None)
     dependents = c3.number_input("Dependents", value=2, step=None)
 
     if retire_age < age:
@@ -279,8 +249,8 @@ with tab1:
     tax_slab = c9.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
     use_post_tax = st.toggle("Calculate Post-Tax Returns?", value=True)
 
-# --- TAB 2: SAFETY & LIQUIDITY ---
-with tab2:
+# --- STEP 2: SAFETY & LIQUIDITY ---
+with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
     cash = c1.number_input(f"Cash / Savings ({sym})", value=p_data["cash"], step=None)
     c1.caption(f"**{fmt_curr(cash, sym, is_inr)}**")
@@ -301,8 +271,8 @@ with tab2:
     health_insurance = c6.number_input(f"Health Insurance Cover ({sym})", value=int(p_data["income"]*12*2), step=None)
     c6.caption(f"**{fmt_curr(health_insurance, sym, is_inr)}**")
 
-# --- TAB 3: ASSETS ---
-with tab3:
+# --- STEP 3: ASSETS ---
+with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
     epf = c1.number_input(f"EPF / PPF ({sym})", value=p_data["epf"], step=None)
     c1.caption(f"**{fmt_curr(epf, sym, is_inr)}**")
@@ -323,8 +293,8 @@ with tab3:
     arbitrage = c6.number_input(f"Arbitrage Funds ({sym})", value=0, step=None)
     c6.caption(f"**{fmt_curr(arbitrage, sym, is_inr)}**")
 
-# --- TAB 4: STRATEGY & ASSUMPTIONS ---
-with tab4:
+# --- STEP 4: STRATEGY & ASSUMPTIONS ---
+with st.expander("4️⃣ Strategy & Growth Assumptions (Please Update)", expanded=False):
     c1, c2, c3 = st.columns(3)
     current_sip = c1.number_input(f"Current SIP ({sym})", value=p_data["sip"], step=None)
     c1.caption(f"**{fmt_curr(current_sip, sym, is_inr)}**")
@@ -352,7 +322,7 @@ with tab4:
     rate_equity = r4.number_input("Equity", value=12.0) / 100
     rate_gold = r5.number_input("Gold", value=8.0 if is_inr else 5.0) / 100
     rate_arbitrage = r6.number_input("Arbitrage", value=7.5 if is_inr else 4.5) / 100
-    rate_fixed = r7.number_input("Fixed Income(like Bonds)", value=7.5 if is_inr else 4.5) / 100
+    rate_fixed = r7.number_input("Bonds", value=7.5 if is_inr else 4.5) / 100
     
     rent_inflation = 0.08 if is_inr else 0.04
 
@@ -384,13 +354,13 @@ if st.session_state.get('has_interacted', False):
         "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
         "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, "total_liquidity": total_liq, "net_worth": net_worth
     }
-    if supabase:
-        try:
-            supabase.table("user_data").upsert(data_payload).execute()
-        except Exception as e:
-            pass 
+    try:
+        supabase.table("user_data").upsert(data_payload).execute()
+    except Exception as e:
+        pass 
 else:
     st.session_state['has_interacted'] = True
+
 
 # RUN DIAGNOSTICS & SIMULATION
 user_data_logic = {
@@ -491,7 +461,7 @@ rules = base.mark_rule(color='gray').encode(
     opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
 ).transform_filter(nearest)
 
-st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), use_container_width=True)
+st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), width="stretch")
 
 st.divider()
 target_row = df[df['Age'] == safe_retire_age].iloc[0]
@@ -529,13 +499,10 @@ feedback_text = st.text_area("Optional: Any feature requests, bugs, or suggestio
 
 if st.button("📤 Submit Feedback", type="primary"):
     if feedback_text.strip():
-        if supabase:
-            try:
-                supabase.table("user_data").update({"feedback": feedback_text}).eq("id", st.session_state['user_id']).execute()
-                st.success("Thank you! Your feedback has been securely submitted. ✅")
-            except Exception as e:
-                st.error(f"🚨 Could not submit feedback: {e}")
-        else:
-            st.error("🚨 Database connection not initialized.")
+        try:
+            supabase.table("user_data").update({"feedback": feedback_text}).eq("id", st.session_state['user_id']).execute()
+            st.success("Thank you! Your feedback has been securely submitted. ✅")
+        except Exception as e:
+            st.error(f"🚨 Could not submit feedback: {e}")
     else:
         st.warning("Please type some feedback before clicking submit!")
