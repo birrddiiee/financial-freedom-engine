@@ -73,17 +73,33 @@ custom_css = """
     [data-testid="stCaptionContainer"] {
         margin-top: -10px !important;
         margin-bottom: 10px !important;
-        color: #00FF00 !important; /* Optional: gives a nice subtle green confirmation */
+        color: #00FF00 !important; 
+    }
+
+    /* --- EVENLY SPACED TABS (MOBILE FRIENDLY) --- */
+    div[data-testid="stTabs"] > div[data-baseweb="tab-list"] {
+        display: flex !important;
+        width: 100% !important;
+    }
+    div[data-testid="stTabs"] button[data-baseweb="tab"] {
+        flex: 1 !important; 
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    div[data-testid="stTabs"] button[data-baseweb="tab"] p {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
     }
 
     /* --- MOBILE RESPONSIVENESS --- */
     @media (max-width: 768px) {
         .stMarkdown p, .stText, label { font-size: 0.85rem !important; }
         [data-testid="stMetricValue"] > div { font-size: 1.5rem !important; }
-        .streamlit-expanderHeader { font-size: 0.9rem !important; }
         h1 { font-size: 1.8rem !important; }
         h2 { font-size: 1.4rem !important; }
         h3 { font-size: 1.1rem !important; }
+        div[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: 0.75rem !important; }
     }
 </style>
 """
@@ -124,9 +140,11 @@ def init_connection():
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
-supabase = init_connection()
+try:
+    supabase = init_connection()
+except Exception as e:
+    supabase = None
 
-# Initialize Session State Variables
 if 'user_id' not in st.session_state:
     st.session_state['user_id'] = str(uuid.uuid4())
 if 'has_interacted' not in st.session_state:
@@ -149,17 +167,14 @@ with col_settings:
 
 with col_title:
     st.title(f"{flag} Financial Freedom Engine")
-    st.markdown("Adjust your parameters below in four sections. Your wealth projection will update **instantly**.")
+    st.markdown("Adjust your parameters below. Your wealth projection will update **instantly**.")
 
 # ==========================================
-# 👤 PERSONA TEMPLATES 
+# 👤 PERSONA TEMPLATES (SIDE-BY-SIDE LAYOUT)
 # ==========================================
 if is_inr:
-    # 1. Use columns to place the label and dropdown side-by-side
     col_label, col_dropdown = st.columns([1, 2])
-    
     with col_label:
-        # Add a slight top margin so the text aligns nicely with the middle of the box
         st.markdown("<p style='margin-top: 8px; font-weight: 600;'>⚡ Quick Start: Choose a Profile</p>", unsafe_allow_html=True)
 
     with col_dropdown:
@@ -169,14 +184,8 @@ if is_inr:
             "🏔️ The Family (Stability & Safe Assets Focus)",
             "🔥 The Aggressive FIRE Chaser (High Equity SIPs)"
         ]
-        # 2. Collapse the default label so it doesn't stack vertically
-        selected_persona = st.selectbox(
-            "persona_select", 
-            options=persona_options, 
-            label_visibility="collapsed"
-        )
+        selected_persona = st.selectbox("persona_select", options=persona_options, label_visibility="collapsed")
 
-    # 🇮🇳 INDIAN NUMBERS (Rupees)
     personas_data = {
         "💻 The City Techie (High Income, High Rent)": {
             "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
@@ -207,13 +216,19 @@ else:
 st.divider()
 
 # ==========================================
-# 🎛️ MAIN PAGE INPUT PANEL
+# 🎛️ MAIN PAGE INPUT PANEL (TABBED NAVIGATION)
 # ==========================================
 
-# --- STEP 1: USER PROFILE ---
-with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False):
-    # Minimalist asymmetrical columns for Age row
-    c1, c2, c3, _ = st.columns([1, 1.2, 1, 3]) 
+tab1, tab2, tab3, tab4 = st.tabs([
+    "1️⃣ Profile", 
+    "2️⃣ Safety", 
+    "3️⃣ Assets", 
+    "4️⃣ Strategy"
+])
+
+# --- TAB 1: USER PROFILE ---
+with tab1:
+    c1, c2, c3 = st.columns(3) # 🆕 PERFECT VERTICAL SYMMETRY FOR ALL ROWS
     
     age = c1.number_input("Current Age", value=p_data["age"], min_value=18, max_value=100, step=None)
     default_retire = max(p_data["retire_age"], age)
@@ -249,8 +264,8 @@ with st.expander("1️⃣ Core Profile & Income (Please Update)", expanded=False
     tax_slab = c9.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
     use_post_tax = st.toggle("Calculate Post-Tax Returns?", value=True)
 
-# --- STEP 2: SAFETY & LIQUIDITY ---
-with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=False):
+# --- TAB 2: SAFETY & LIQUIDITY ---
+with tab2:
     c1, c2, c3 = st.columns(3)
     cash = c1.number_input(f"Cash / Savings ({sym})", value=p_data["cash"], step=None)
     c1.caption(f"**{fmt_curr(cash, sym, is_inr)}**")
@@ -271,8 +286,8 @@ with st.expander("2️⃣ Safety Net & Insurance (Please Update)", expanded=Fals
     health_insurance = c6.number_input(f"Health Insurance Cover ({sym})", value=int(p_data["income"]*12*2), step=None)
     c6.caption(f"**{fmt_curr(health_insurance, sym, is_inr)}**")
 
-# --- STEP 3: ASSETS ---
-with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
+# --- TAB 3: ASSETS ---
+with tab3:
     c1, c2, c3 = st.columns(3)
     epf = c1.number_input(f"EPF / PPF ({sym})", value=p_data["epf"], step=None)
     c1.caption(f"**{fmt_curr(epf, sym, is_inr)}**")
@@ -293,8 +308,8 @@ with st.expander("3️⃣ Current Investments (Please Update)", expanded=False):
     arbitrage = c6.number_input(f"Arbitrage Funds ({sym})", value=0, step=None)
     c6.caption(f"**{fmt_curr(arbitrage, sym, is_inr)}**")
 
-# --- STEP 4: STRATEGY & ASSUMPTIONS ---
-with st.expander("4️⃣ Strategy & Growth Assumptions (Please Update)", expanded=False):
+# --- TAB 4: STRATEGY & ASSUMPTIONS ---
+with tab4:
     c1, c2, c3 = st.columns(3)
     current_sip = c1.number_input(f"Current SIP ({sym})", value=p_data["sip"], step=None)
     c1.caption(f"**{fmt_curr(current_sip, sym, is_inr)}**")
@@ -354,13 +369,13 @@ if st.session_state.get('has_interacted', False):
         "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
         "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, "total_liquidity": total_liq, "net_worth": net_worth
     }
-    try:
-        supabase.table("user_data").upsert(data_payload).execute()
-    except Exception as e:
-        pass 
+    if supabase:
+        try:
+            supabase.table("user_data").upsert(data_payload).execute()
+        except Exception as e:
+            pass 
 else:
     st.session_state['has_interacted'] = True
-
 
 # RUN DIAGNOSTICS & SIMULATION
 user_data_logic = {
@@ -499,10 +514,13 @@ feedback_text = st.text_area("Optional: Any feature requests, bugs, or suggestio
 
 if st.button("📤 Submit Feedback", type="primary"):
     if feedback_text.strip():
-        try:
-            supabase.table("user_data").update({"feedback": feedback_text}).eq("id", st.session_state['user_id']).execute()
-            st.success("Thank you! Your feedback has been securely submitted. ✅")
-        except Exception as e:
-            st.error(f"🚨 Could not submit feedback: {e}")
+        if supabase:
+            try:
+                supabase.table("user_data").update({"feedback": feedback_text}).eq("id", st.session_state['user_id']).execute()
+                st.success("Thank you! Your feedback has been securely submitted. ✅")
+            except Exception as e:
+                st.error(f"🚨 Could not submit feedback: {e}")
+        else:
+            st.error("🚨 Database connection not initialized.")
     else:
         st.warning("Please type some feedback before clicking submit!")
