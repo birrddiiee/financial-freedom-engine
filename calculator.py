@@ -1,9 +1,8 @@
 import pandas as pd
 
-def generate_forecast(data):
-    # Core variables
+def calculate_true_fi_age(data):
+    """Simulates continuous working and SIPs until the FI target is naturally reached."""
     age = data['age']
-    retire_age = data['retire_age']
     living_expense = data['living_expense']
     rent = data['rent']
     sip = data['current_sip']
@@ -15,24 +14,82 @@ def generate_forecast(data):
     housing_goal = data['housing_goal']
     monthly_pf = data['monthly_pf']
     
-    # Initial Balances
-    cash = data['cash']
-    fd = data['fd']
-    epf = data['epf']
+    cash, fd, epf = data['cash'], data['fd'], data['epf']
     equity = data['mutual_funds'] + data['stocks']
-    gold = data.get('gold', 0)
-    arbitrage = data.get('arbitrage', 0)
-    fixed_income = data.get('fixed_income', 0)
+    gold, arbitrage, fixed_income = data.get('gold', 0), data.get('arbitrage', 0), data.get('fixed_income', 0)
     
-    # Expected Rates
-    r_cash = data['rate_savings']
-    r_fd = data['rate_fd']
-    r_epf = data['rate_epf']
-    r_eq = data['rate_equity']           
+    r_cash, r_fd, r_epf, r_eq = data['rate_savings'], data['rate_fd'], data['rate_epf'], data['rate_equity']
     r_sip = data.get('rate_new_sip', r_eq) 
-    r_gold = data.get('rate_gold', 0.08)
-    r_arb = data.get('rate_arbitrage', 0.07)
-    r_fixed = data.get('rate_fixed', 0.07)
+    r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
+    
+    current_expense = living_expense * 12
+    current_rent = rent * 12
+    sip_corpus = 0.0
+    annual_sip = sip * 12
+    
+    for yr in range(120 - age + 1):
+        current_age = age + yr
+        total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
+        
+        annual_need = current_expense
+        if housing_goal == "Rent Forever":
+            annual_need += current_rent
+            
+        req_corpus = annual_need / swr
+        if housing_goal == "Buy a Home":
+            req_corpus += house_cost
+            
+        # Stop and return the age the moment wealth crosses the target
+        if total_wealth >= req_corpus:
+            return current_age
+            
+        # Continue working and accumulating
+        epf += (epf * r_epf) + (monthly_pf * 12)
+        sip_corpus += (sip_corpus * r_sip) + annual_sip
+        annual_sip *= (1 + step_up) 
+        
+        cash += cash * r_cash
+        fd += fd * r_fd
+        fixed_income += fixed_income * r_fixed
+        arbitrage += arbitrage * r_arb
+        gold += gold * r_gold
+        equity += equity * r_eq
+        
+        current_expense *= (1 + inflation)
+        current_rent *= (1 + rent_inflation)
+        if housing_goal == "Buy a Home":
+            house_cost *= (1 + inflation)
+            
+    return 120
+
+def generate_forecast(data):
+    age = data['age']
+    desired_retire_age = data['retire_age']
+    
+    # 🚀 THE NEW LOGIC: Calculate True FI Age first
+    true_fi_age = calculate_true_fi_age(data)
+    
+    # If desired age is impossible, force the simulation to keep working until FI is reached
+    effective_retire_age = max(desired_retire_age, true_fi_age)
+    
+    living_expense = data['living_expense']
+    rent = data['rent']
+    sip = data['current_sip']
+    step_up = data['step_up']
+    inflation = data['inflation']
+    rent_inflation = data['rent_inflation']
+    swr = data['swr']
+    house_cost = data['house_cost']
+    housing_goal = data['housing_goal']
+    monthly_pf = data['monthly_pf']
+    
+    cash, fd, epf = data['cash'], data['fd'], data['epf']
+    equity = data['mutual_funds'] + data['stocks']
+    gold, arbitrage, fixed_income = data.get('gold', 0), data.get('arbitrage', 0), data.get('fixed_income', 0)
+    
+    r_cash, r_fd, r_epf, r_eq = data['rate_savings'], data['rate_fd'], data['rate_epf'], data['rate_equity']
+    r_sip = data.get('rate_new_sip', r_eq) 
+    r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
     
     forecast = []
     current_expense = living_expense * 12
@@ -41,29 +98,24 @@ def generate_forecast(data):
     sip_corpus = 0.0
     annual_sip = sip * 12
     
-    # 🚀 CHANGED TO 120 YEARS
     for yr in range(120 - age + 1):
         current_age = age + yr
         
-        # TOTAL WEALTH THIS YEAR
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # REQUIRED CORPUS & EXPENSES
         annual_need = current_expense
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
-        # The Glide Path: Tapers smoothly to exactly zero at age 120
         years_remaining = max(0, 120 - current_age)
         max_multiple = 1 / swr
         current_multiple = min(max_multiple, years_remaining)
         
         req_corpus = annual_need * current_multiple
         
-        if housing_goal == "Buy a Home" and current_age <= retire_age:
+        if housing_goal == "Buy a Home" and current_age <= effective_retire_age:
             req_corpus += house_cost
         
-        # Log the snapshot for the chart (Now strictly includes Annual Expense!)
         forecast.append({
             "Age": current_age,
             "Projected Wealth": total_wealth,
@@ -75,8 +127,8 @@ def generate_forecast(data):
         if current_age == 120: 
             break
         
-        # CASH FLOW & WITHDRAWALS FOR NEXT YEAR
-        if current_age < retire_age:
+        # 🚀 Cash flow drops to zero ONLY when effective_retire_age is reached
+        if current_age < effective_retire_age:
             epf += (epf * r_epf) + (monthly_pf * 12)
             sip_corpus += (sip_corpus * r_sip) + annual_sip
             annual_sip *= (1 + step_up) 
@@ -89,7 +141,7 @@ def generate_forecast(data):
             equity += equity * r_eq
         else:
             total_outflow = annual_need
-            if housing_goal == "Buy a Home" and current_age == retire_age:
+            if housing_goal == "Buy a Home" and current_age == effective_retire_age:
                 total_outflow += house_cost 
                 
             rem = total_outflow
@@ -127,10 +179,9 @@ def generate_forecast(data):
             sip_corpus += sip_corpus * r_sip
             epf += epf * r_epf
             
-        # APPLY INFLATION
         current_expense *= (1 + inflation)
         current_rent *= (1 + rent_inflation)
-        if housing_goal == "Buy a Home" and current_age < retire_age:
+        if housing_goal == "Buy a Home" and current_age < effective_retire_age:
             house_cost *= (1 + inflation)
             
     return pd.DataFrame(forecast)
