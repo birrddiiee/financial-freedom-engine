@@ -117,7 +117,7 @@ with col_title:
     st.markdown("A tax-aware wealth simulator built for realistic planning.")
 
 # ==========================================
-# 👤 PERSONA SELECTOR & DWZ TOGGLE
+# 👤 PERSONA SELECTOR & ADVANCED TOGGLES
 # ==========================================
 if is_inr:
     cl_p, cd_p = st.columns([1, 2])
@@ -159,11 +159,18 @@ else:
     }
 
 st.markdown("<br>", unsafe_allow_html=True)
-# 💀 FRONT AND CENTER: DIE WITH ZERO MODE
-dwz_mode = st.toggle(
-    "💀 **Die With Zero Mode (Retire Early). See the graph changing**", 
+
+# 💀 & 🛡️ FRONT AND CENTER: ADVANCED RETIREMENT TOGGLES
+col_t1, col_t2 = st.columns(2)
+dwz_mode = col_t1.toggle(
+    "💀 **Die With Zero Mode (Retire Early)**", 
     value=False, 
-    help="Instead of blindly saving 25x your expenses to preserve capital forever, this calculates the exact mathematical minimum needed to safely reach age 120. This usually shrinks your target drastically and allows you to retire earlier!"
+    help="Mathematically calculates the exact minimum needed to safely reach age 120 and zero out, allowing earlier retirement."
+)
+safe_retire_mode = col_t2.toggle(
+    "🛡️ **Move to Risk-Free at Retirement**", 
+    value=False, 
+    help="Automatically liquidates your entire portfolio into Debt/Bonds exactly when you retire to completely avoid market crashes."
 )
 
 st.divider()
@@ -177,7 +184,7 @@ with tab_prof:
     r1c1, r1c2, r1c3 = st.columns(3)
     age = r1c1.number_input("Current Age", min_value=18, max_value=None, value=int(p_data["age"]))
     default_retire = max(p_data["retire_age"], age)
-    retire_age = r1c2.number_input("Retire Age", min_value=18, max_value=None, value=int(default_retire))
+    retire_age = r1c2.number_input("Desired Retire Age", min_value=18, max_value=119, value=int(default_retire))
     dependents = r1c3.number_input("Dependents", min_value=0, max_value=None, value=2)
     safe_retire_age = max(age, retire_age)
     
@@ -255,7 +262,7 @@ with tab_strat:
     
     swr = r2c3.number_input("Safe Withdrawal Rate %", min_value=0.1, max_value=None, value=4.0) / 100
     
-    r3c1, r3c2, r3c3 = st.columns(3)
+    r3c1, r3c2 = st.columns(2)
     rent_inflation = r3c1.number_input("Rent Inflation %", min_value=0.0, max_value=None, value=8.0 if is_inr else 4.0) / 100
     
     st.markdown("**Expected Returns (%)**")
@@ -328,7 +335,8 @@ calc_in = {
     "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal, "cash": cash, "fd": fd, "epf": epf,
     "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income,
     "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, 
-    "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_bond, "dwz_mode": dwz_mode
+    "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_bond, 
+    "dwz_mode": dwz_mode, "safe_retire_mode": safe_retire_mode
 }
 
 df = calculator.generate_forecast(calc_in)
