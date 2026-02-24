@@ -114,7 +114,7 @@ with col_settings:
 
 with col_title:
     st.title(f"{flag} Financial Freedom Engine")
-    st.markdown(" Please update four sections below and see your road map to freedom unfold instantly! 🚀")
+    st.markdown("A tax-aware wealth simulator built for realistic planning.")
 
 # ==========================================
 # 👤 PERSONA SELECTOR
@@ -193,6 +193,9 @@ with tab_prof:
     r3c2.caption(f"**{fmt_curr(rent, sym, is_inr)}**")
     tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
     tax_slab = r3c3.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
+    
+    # 🆕 Moved the tax toggle here to Tab 1
+    use_post_tax = r3c3.toggle("Calculate post tax returns", True)
 
 with tab_safe:
     r1c1, r1c2, r1c3 = st.columns(3)
@@ -238,7 +241,7 @@ with tab_strat:
     r2c1, r2c2, r2c3 = st.columns(3)
     h_options = ["Rent Forever", "Buy a Home", "Already Own"]
     h_index = h_options.index(p_data.get("housing", "Rent Forever"))
-    housing_goal = r2c1.selectbox("Housing Goal", options=h_options, index=h_index)
+    housing_goal = r2c1.selectbox("Housing Plan", options=h_options, index=h_index)
     
     house_cost_default = 5000000 if is_inr else 350000
     house_cost = r2c2.number_input("Future House Budget", 0, 1000000000, house_cost_default)
@@ -246,10 +249,9 @@ with tab_strat:
     
     swr = r2c3.number_input("Safe Withdrawal Rate %", 1.0, 10.0, 4.0) / 100
     
-    # 🆕 Restored Rent Inflation Input next to the Tax Toggle
-    r3c1, r3c2 = st.columns(2)
+    # 🆕 Rent inflation perfectly formatted in its own row
+    r3c1, r3c2, r3c3 = st.columns(3)
     rent_inflation = r3c1.number_input("Rent Inflation %", 0.0, 15.0, 8.0 if is_inr else 4.0) / 100
-    use_post_tax = r3c2.toggle("Enable Tax-Adjusted Logic", True)
     
     st.markdown("**Expected Returns (%)**")
     rr1, rr2, rr3, rr4 = st.columns(4)
