@@ -339,6 +339,15 @@ if not df.empty:
     extra_sip_req = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_sip, step_up)) if gap_val < 0 else 0.0
 
     st.subheader("📊 Wealth Forecast")
+    
+    # 🆕 ADDED CUSTOM HTML LEGEND
+    st.markdown("""
+    <div style='display: flex; gap: 20px; margin-bottom: 10px; font-size: 0.95rem;'>
+        <div><span style='color: #00FF00; font-weight: 800;'>━ Solid Green Line:</span> Projected Wealth (Your Actual Portfolio)</div>
+        <div><span style='color: #FF0000; font-weight: 800;'>╍ Dashed Red Line:</span> Required Corpus (Tapers down safely post-retirement)</div>
+    </div>
+    """, unsafe_allow_html=True)
+
     zoom = st.toggle("🔍 Default Zoom", value=True)
 
     if zoom and practical_age < 100:
