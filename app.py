@@ -326,13 +326,17 @@ calc_in = {
 df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
+    # 🔧 FORCE PURE TYPES FOR ALTAIR
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
     df['Gap'] = df['Gap'].astype(float)
+    if 'Annual Expense' in df.columns:
+        df['Annual Expense'] = df['Annual Expense'].astype(float)
 
     freedom = df[df['Gap'] >= 0]
-    practical_age = int(freedom.iloc[0]['Age']) if not freedom.empty else 100
+    # Defaulting fallback to 120 instead of 100
+    practical_age = int(freedom.iloc[0]['Age']) if not freedom.empty else 120
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
@@ -340,7 +344,6 @@ if not df.empty:
 
     st.subheader("📊 Wealth Forecast")
     
-    # 🆕 UPDATED LEGEND FOR THE 3 LINES
     st.markdown("""
     <div style='display: flex; gap: 20px; margin-bottom: 10px; font-size: 0.90rem; flex-wrap: wrap;'>
         <div><span style='color: #00FF00; font-weight: 800;'>━ Solid Green Line:</span> Projected Wealth</div>
@@ -351,7 +354,7 @@ if not df.empty:
 
     zoom = st.toggle("🔍 Default Zoom", value=True)
 
-    # Updated max age to 120
+    # 🚀 CHANGED LIMIT TO 120
     if zoom and practical_age < 120:
         end_v = int(min(max(practical_age, safe_retire_age) + 10, 120))
         plot_df = df[df['Age'] <= end_v].copy()
@@ -372,10 +375,15 @@ if not df.empty:
     c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
         y=alt.Y('Required Corpus:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
     )
-    # 🆕 THE NEW EXPENSE LINE
-    c3 = base.mark_line(color='#FFA500', strokeWidth=2).encode(
-        y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
-    )
+    
+    # Safely draw the Orange line now that the data is guaranteed to be there
+    if 'Annual Expense' in plot_df.columns:
+        c3 = base.mark_line(color='#FFA500', strokeWidth=2).encode(
+            y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
+        )
+        layers = [c1, c2, c3]
+    else:
+        layers = [c1, c2]
     
     pt = base.mark_point().encode(
         opacity=alt.value(0), 
@@ -392,7 +400,7 @@ if not df.empty:
         opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
     ).transform_filter(sel)
     
-    st.altair_chart(alt.layer(c1, c2, c3, pt, rl), width="stretch")
+    st.altair_chart(alt.layer(*layers, pt, rl), width="stretch")
 
     st.divider()
 

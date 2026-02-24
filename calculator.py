@@ -45,15 +45,15 @@ def generate_forecast(data):
     for yr in range(120 - age + 1):
         current_age = age + yr
         
-        # 1. TOTAL WEALTH THIS YEAR
+        # TOTAL WEALTH THIS YEAR
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # 2. REQUIRED CORPUS & EXPENSES
+        # REQUIRED CORPUS & EXPENSES
         annual_need = current_expense
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
-        # The Glide Path: Limits the multiple to remaining years until 120
+        # The Glide Path: Tapers smoothly to exactly zero at age 120
         years_remaining = max(0, 120 - current_age)
         max_multiple = 1 / swr
         current_multiple = min(max_multiple, years_remaining)
@@ -63,7 +63,7 @@ def generate_forecast(data):
         if housing_goal == "Buy a Home" and current_age <= retire_age:
             req_corpus += house_cost
         
-        # Log the snapshot for the chart (Now includes Annual Expense)
+        # Log the snapshot for the chart (Now strictly includes Annual Expense!)
         forecast.append({
             "Age": current_age,
             "Projected Wealth": total_wealth,
@@ -75,7 +75,7 @@ def generate_forecast(data):
         if current_age == 120: 
             break
         
-        # 3. CASH FLOW FOR NEXT YEAR
+        # CASH FLOW & WITHDRAWALS FOR NEXT YEAR
         if current_age < retire_age:
             epf += (epf * r_epf) + (monthly_pf * 12)
             sip_corpus += (sip_corpus * r_sip) + annual_sip
@@ -127,7 +127,7 @@ def generate_forecast(data):
             sip_corpus += sip_corpus * r_sip
             epf += epf * r_epf
             
-        # 4. APPLY INFLATION
+        # APPLY INFLATION
         current_expense *= (1 + inflation)
         current_rent *= (1 + rent_inflation)
         if housing_goal == "Buy a Home" and current_age < retire_age:
