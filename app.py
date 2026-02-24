@@ -340,18 +340,20 @@ if not df.empty:
 
     st.subheader("📊 Wealth Forecast")
     
-    # 🆕 ADDED CUSTOM HTML LEGEND
+    # 🆕 UPDATED LEGEND FOR THE 3 LINES
     st.markdown("""
-    <div style='display: flex; gap: 20px; margin-bottom: 10px; font-size: 0.95rem;'>
-        <div><span style='color: #00FF00; font-weight: 800;'>━ Solid Green Line:</span> Projected Wealth (Your Actual Portfolio)</div>
-        <div><span style='color: #FF0000; font-weight: 800;'>╍ Dashed Red Line:</span> Required Corpus (Tapers down safely post-retirement)</div>
+    <div style='display: flex; gap: 20px; margin-bottom: 10px; font-size: 0.90rem; flex-wrap: wrap;'>
+        <div><span style='color: #00FF00; font-weight: 800;'>━ Solid Green Line:</span> Projected Wealth</div>
+        <div><span style='color: #FF0000; font-weight: 800;'>╍ Dashed Red Line:</span> Required Target (Depletes to zero at age 120)</div>
+        <div><span style='color: #FFA500; font-weight: 800;'>━ Solid Orange Line:</span> Annual Living Expenses</div>
     </div>
     """, unsafe_allow_html=True)
 
     zoom = st.toggle("🔍 Default Zoom", value=True)
 
-    if zoom and practical_age < 100:
-        end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
+    # Updated max age to 120
+    if zoom and practical_age < 120:
+        end_v = int(min(max(practical_age, safe_retire_age) + 10, 120))
         plot_df = df[df['Age'] <= end_v].copy()
     else:
         plot_df = df.copy()
@@ -370,6 +372,10 @@ if not df.empty:
     c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
         y=alt.Y('Required Corpus:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
     )
+    # 🆕 THE NEW EXPENSE LINE
+    c3 = base.mark_line(color='#FFA500', strokeWidth=2).encode(
+        y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
+    )
     
     pt = base.mark_point().encode(
         opacity=alt.value(0), 
@@ -377,6 +383,7 @@ if not df.empty:
             alt.Tooltip('Age:Q', title='Age'), 
             alt.Tooltip('Projected Wealth:Q', format=',.0f', title=f'Wealth ({sym})'), 
             alt.Tooltip('Required Corpus:Q', format=',.0f', title=f'Target ({sym})'), 
+            alt.Tooltip('Annual Expense:Q', format=',.0f', title=f'Expenses ({sym})'),
             alt.Tooltip('Gap:Q', format=',.0f', title=f'Surplus/Gap ({sym})')
         ]
     ).add_params(sel)
@@ -385,7 +392,7 @@ if not df.empty:
         opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
     ).transform_filter(sel)
     
-    st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
+    st.altair_chart(alt.layer(c1, c2, c3, pt, rl), width="stretch")
 
     st.divider()
 

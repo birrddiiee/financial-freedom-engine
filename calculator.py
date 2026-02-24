@@ -41,39 +41,38 @@ def generate_forecast(data):
     sip_corpus = 0.0
     annual_sip = sip * 12
     
-    for yr in range(100 - age + 1):
+    # 🚀 CHANGED TO 120 YEARS
+    for yr in range(120 - age + 1):
         current_age = age + yr
         
         # 1. TOTAL WEALTH THIS YEAR
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # 2. REQUIRED CORPUS (The Glide Path Goalpost)
+        # 2. REQUIRED CORPUS & EXPENSES
         annual_need = current_expense
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
-        if current_age <= retire_age:
-            # Accumulation phase: You need the full SWR multiple (e.g., 25x)
-            req_corpus = annual_need / swr
-            if housing_goal == "Buy a Home":
-                req_corpus += house_cost
-        else:
-            # Decumulation Phase (The Glide Path Fix):
-            # You don't need 25x expenses at age 90. You only need to cover remaining years.
-            years_remaining = max(1, 100 - current_age)
-            max_multiple = 1 / swr
-            # Smoothly transition the requirement down as you age
-            current_multiple = min(max_multiple, years_remaining)
-            req_corpus = annual_need * current_multiple
+        # The Glide Path: Limits the multiple to remaining years until 120
+        years_remaining = max(0, 120 - current_age)
+        max_multiple = 1 / swr
+        current_multiple = min(max_multiple, years_remaining)
         
+        req_corpus = annual_need * current_multiple
+        
+        if housing_goal == "Buy a Home" and current_age <= retire_age:
+            req_corpus += house_cost
+        
+        # Log the snapshot for the chart (Now includes Annual Expense)
         forecast.append({
             "Age": current_age,
             "Projected Wealth": total_wealth,
             "Required Corpus": req_corpus,
+            "Annual Expense": annual_need,
             "Gap": total_wealth - req_corpus
         })
         
-        if current_age == 100: 
+        if current_age == 120: 
             break
         
         # 3. CASH FLOW FOR NEXT YEAR
