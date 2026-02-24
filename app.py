@@ -256,7 +256,7 @@ render_card(cl2, diagnostics['debt'], "Debt Health")
 render_card(cl3, diagnostics['life'], "Life Cover")
 
 # ==========================================
-# 📈 WEALTH PROJECTION & CHART (BULLETPROOF)
+# 📈 WEALTH PROJECTION & CHART
 # ==========================================
 eff_eq = logic.calculate_post_tax_rate(rate_equity, "Equity", tax_slab, use_post_tax)
 eff_fd = logic.calculate_post_tax_rate(rate_fd, "FD", tax_slab, use_post_tax)
@@ -277,7 +277,7 @@ calc_in = {
 df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
-    # 🔧 FORCE PURE TYPES FOR ALTAIR
+    # 🔧 FORCE PURE TYPES
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
@@ -291,46 +291,41 @@ if not df.empty:
     extra_sip_req = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step_up)) if gap_val < 0 else 0.0
 
     st.subheader("📊 Wealth Forecast")
-    
-    # 🆕 SAFE MODE TOGGLE
-    c_tog1, c_tog2, _ = st.columns([1, 1, 2])
-    zoom = c_tog1.toggle("🔍 Default Zoom", value=True)
-    safe_mode = c_tog2.toggle("🚑 Safe Mode Chart", value=False)
+    zoom = st.toggle("🔍 Default Zoom", value=True)
 
-    if safe_mode:
-        st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']], height=400)
+    # 🚀 THE BULLETPROOF ZOOM FIX: Slice the DataFrame directly
+    if zoom and practical_age < 100:
+        end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
+        plot_df = df[df['Age'] <= end_v].copy()
     else:
-        # 🔵 ALTAIR CHART (With Strict Type Sanitization)
-        if zoom and practical_age < 100:
-            end_v = min(max(practical_age, safe_retire_age) + 10, 100)
-            temp_df = df[df['Age'] <= end_v]
-            raw_max_y = max(temp_df['Projected Wealth'].max(), temp_df['Required Corpus'].max()) * 1.1
-            view_x = [float(age), float(end_v)]
-            view_y = [0.0, float(raw_max_y)]
-        else:
-            raw_max_y = max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1
-            view_x = [float(age), 100.0]
-            view_y = [0.0, float(raw_max_y)]
+        plot_df = df.copy()
 
-        if pd.isna(view_y[1]) or view_y[1] <= 0:
-            view_y[1] = 100000.0 
-
-        base = alt.Chart(df).encode(x=alt.X('Age:Q', scale=alt.Scale(domain=view_x), axis=alt.Axis(format='d')))
-        sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
-        
-        c1 = base.mark_line(color='#00FF00', strokeWidth=3).encode(
-            y=alt.Y('Projected Wealth:Q', scale=alt.Scale(domain=view_y), title=f"Amount ({sym})")
-        )
-        c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(y='Required Corpus:Q')
-        pt = base.mark_point().encode(opacity=alt.value(0), tooltip=['Age:Q', alt.Tooltip('Projected Wealth:Q', format=',.0f'), alt.Tooltip('Required Corpus:Q', format=',.0f'), alt.Tooltip('Gap:Q', format=',.0f')]).add_params(sel)
-        rl = base.mark_rule(color='gray').encode(opacity=alt.condition(sel, alt.value(0.5), alt.value(0))).transform_filter(sel)
-        
-        try:
-            # Replaced use_container_width with width='stretch'
-            st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
-        except Exception as e:
-            st.error(f"Chart Render Error: {e}")
-            st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']])
+    base = alt.Chart(plot_df).encode(x=alt.X('Age:Q', axis=alt.Axis(format='d')))
+    sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
+    
+    c1 = base.mark_line(color='#00FF00', strokeWidth=3).encode(
+        y=alt.Y('Projected Wealth:Q', title=f"Amount ({sym})")
+    )
+    c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
+        y=alt.Y('Required Corpus:Q', title="")
+    )
+    
+    pt = base.mark_point().encode(
+        opacity=alt.value(0), 
+        tooltip=[
+            alt.Tooltip('Age:Q', title='Age'), 
+            alt.Tooltip('Projected Wealth:Q', format=',.0f', title=f'Wealth ({sym})'), 
+            alt.Tooltip('Required Corpus:Q', format=',.0f', title=f'Target ({sym})'), 
+            alt.Tooltip('Gap:Q', format=',.0f', title=f'Surplus/Gap ({sym})')
+        ]
+    ).add_params(sel)
+    
+    rl = base.mark_rule(color='gray').encode(
+        opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
+    ).transform_filter(sel)
+    
+    # Render with modern width specification
+    st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
 
     st.divider()
 
@@ -371,7 +366,7 @@ if st.session_state.get('has_interacted', False):
         "rate_equity": rate_equity, "rate_gold": rate_gold, "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, 
         "total_liquidity": total_liq, "net_worth": net_worth,
         
-        # 🆕 Computed Metrics
+        # 🆕 Computed Metrics safely passed
         "practical_age": practical_age if 'practical_age' in locals() else None,
         "gap_val": gap_val if 'gap_val' in locals() else None,
         "extra_sip_req": extra_sip_req if 'extra_sip_req' in locals() else None
