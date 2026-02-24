@@ -1,63 +1,120 @@
 import pandas as pd
 
-def calculate_future_value(principal, annual_rate, years):
-    return principal * ((1 + annual_rate) ** years)
-
-def calculate_step_up_sip(monthly_investment, annual_return, years, annual_step_up):
-    if years <= 0: return 0
-    total_corpus = 0
-    current_sip = monthly_investment
-    for y in range(1, int(years) + 1):
-        total_corpus = total_corpus * (1 + annual_return)
-        # Add a year's worth of SIP, assuming mid-year average compounding for the new flows
-        total_corpus += (current_sip * 12) * (1 + (annual_return / 2))
-        current_sip *= (1 + annual_step_up)
-    return total_corpus
-
-def solve_extra_sip_needed(shortfall, years, rate, step_up):
-    if shortfall <= 0 or years <= 0: return 0
-    fv_unit = calculate_step_up_sip(1, rate, years, step_up)
-    return shortfall / fv_unit if fv_unit > 0 else 0
-
 def generate_forecast(data):
-    age = data.get('age', 30)
-    projection = [] 
+    # Core variables
+    age = data['age']
+    retire_age = data['retire_age']
+    living_expense = data['living_expense']
+    rent = data['rent']
+    sip = data['current_sip']
+    step_up = data['step_up']
+    inflation = data['inflation']
+    rent_inflation = data['rent_inflation']
+    swr = data['swr']
+    house_cost = data['house_cost']
+    housing_goal = data['housing_goal']
+    monthly_pf = data['monthly_pf']
     
-    # Simulate year by year up to Age 100
-    for y in range(101 - age):
-        current_sim_age = age + y
+    # Initial Balances (Now includes all the new asset classes!)
+    cash = data['cash']
+    fd = data['fd']
+    epf = data['epf']
+    equity = data['mutual_funds'] + data['stocks']
+    gold = data.get('gold', 0)
+    arbitrage = data.get('arbitrage', 0)
+    fixed_income = data.get('fixed_income', 0)
+    
+    # Expected Rates
+    r_cash = data['rate_savings']
+    r_fd = data['rate_fd']
+    r_epf = data['rate_epf']
+    r_eq = data['rate_equity']           # For existing equity
+    r_sip = data.get('rate_new_sip', r_eq) # For new ongoing SIPs
+    r_gold = data.get('rate_gold', 0.08)
+    r_arb = data.get('rate_arbitrage', 0.07)
+    r_fixed = data.get('rate_fixed', 0.07)
+    
+    forecast = []
+    current_expense = living_expense * 12
+    current_rent = rent * 12
+    
+    # We isolate the SIP corpus so it can grow at its own unique rate
+    sip_corpus = 0.0
+    annual_sip = sip * 12
+    
+    for yr in range(100 - age + 1):
+        current_age = age + yr
         
-        # Expenses (Inflated)
-        fv_living = data['living_expense'] * ((1 + data['inflation']) ** y)
-        fv_rent = (data['rent'] * ((1 + data['rent_inflation']) ** y)) if data.get('housing_goal') == "Rent Forever" else 0
-        total_monthly_need = fv_living + fv_rent
+        # Calculate Total Wealth for the current year
+        total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # Required Corpus at this age based on Safe Withdrawal Rate (SWR)
-        corpus_req = (total_monthly_need * 12) / data['swr']
-        
-        # Add House Cost to the required corpus if buying a home
-        if data.get('housing_goal') == "Buy a Home":
-            corpus_req += data.get('house_cost', 0) * ((1 + data['rent_inflation']) ** y)
+        # Calculate Required Corpus
+        req_corpus = 0
+        if current_age >= retire_age:
+            annual_need = current_expense
+            if housing_goal == "Rent Forever":
+                annual_need += current_rent
+            req_corpus = annual_need / swr
             
-        # Accumulated Wealth at this age
-        wealth = (
-            calculate_future_value(data['cash'], data['rate_savings'], y) +
-            calculate_future_value(data['fd'], data['rate_fd'], y) +
-            calculate_future_value(data['epf'], data['rate_epf'], y) +
-            # 🆕 THE FIX: Added Fixed Income calculation so Bonds/T-Bills compound properly
-            calculate_future_value(data.get('fixed_income', 0), data.get('rate_fixed', 0.0), y) +
-            calculate_future_value(data['mutual_funds'] + data['stocks'], data['rate_equity'], y) +
-            calculate_future_value(data['gold'], data['rate_gold'], y) +
-            calculate_future_value(data['arbitrage'], data['rate_arbitrage'], y) +
-            calculate_step_up_sip(data['current_sip'], data['rate_new_sip'], y, data['step_up']) +
-            calculate_step_up_sip(data['monthly_pf'], data['rate_epf'], y, data['step_up']) # 24% Auto-PF
-        )
+            # Add house cost as a lump sum need at retirement age
+            if housing_goal == "Buy a Home" and current_age == retire_age:
+                req_corpus += house_cost
         
-        projection.append({
-            "Age": current_sim_age, 
-            "Projected Wealth": round(wealth), 
-            "Required Corpus": round(corpus_req), 
-            "Gap": round(wealth - corpus_req)
+        # Log the current year's snapshot
+        forecast.append({
+            "Age": current_age,
+            "Projected Wealth": total_wealth,
+            "Required Corpus": req_corpus,
+            "Gap": total_wealth - req_corpus
         })
         
-    return pd.DataFrame(projection)
+        if current_age == 100: 
+            break
+        
+        # 📈 COMPOUNDING FOR THE NEXT YEAR 
+        if current_age < retire_age:
+            # Still working: EPF and SIPs continue
+            epf += (epf * r_epf) + (monthly_pf * 12)
+            sip_corpus += (sip_corpus * r_sip) + annual_sip
+            annual_sip *= (1 + step_up) # Step-up SIP for next year
+        else:
+            # Retired: Stop contributing, just compound existing EPF
+            epf += epf * r_epf 
+            
+        # All other assets compound silently in the background
+        equity += equity * r_eq
+        gold += gold * r_gold
+        arbitrage += arbitrage * r_arb
+        fixed_income += fixed_income * r_fixed
+        fd += fd * r_fd
+        cash += cash * r_cash
+        
+        # Apply Inflation
+        current_expense *= (1 + inflation)
+        current_rent *= (1 + rent_inflation)
+        if housing_goal == "Buy a Home" and current_age < retire_age:
+            house_cost *= (1 + inflation)
+            
+    return pd.DataFrame(forecast)
+
+def solve_extra_sip_needed(gap, years, rate, step_up):
+    # Binary search to find the exact monthly SIP needed to close the wealth gap
+    if gap <= 0 or years <= 0: return 0.0
+    
+    low, high = 0.0, gap
+    best = high
+    for _ in range(50): # 50 iterations is enough for penny-perfect precision
+        mid = (low + high) / 2
+        fv = 0
+        annual_sip = mid * 12
+        for y in range(years):
+            fv = (fv + annual_sip) * (1 + rate)
+            annual_sip *= (1 + step_up)
+            
+        if fv >= gap:
+            best = mid
+            high = mid
+        else:
+            low = mid
+            
+    return round(best / 12, 2)

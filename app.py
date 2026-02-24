@@ -161,24 +161,24 @@ else:
 st.divider()
 
 # ==========================================
-# 🎛️ INPUT TABS
+# 🎛️ INPUT TABS (WATERTIGHT - ALL UPPER LIMITS REMOVED)
 # ==========================================
 tab_prof, tab_safe, tab_asset, tab_strat = st.tabs(["1️⃣ Profile", "2️⃣ Safety", "3️⃣ Assets", "4️⃣ Strategy"])
 
 with tab_prof:
     r1c1, r1c2, r1c3 = st.columns(3)
-    age = r1c1.number_input("Current Age", 18, 100, p_data["age"])
+    age = r1c1.number_input("Current Age", min_value=18, max_value=None, value=int(p_data["age"]))
     default_retire = max(p_data["retire_age"], age)
-    retire_age = r1c2.number_input("Retire Age", age, 100, default_retire)
-    dependents = r1c3.number_input("Dependents", 0, 10, 2)
+    retire_age = r1c2.number_input("Retire Age", min_value=18, max_value=None, value=int(default_retire))
+    dependents = r1c3.number_input("Dependents", min_value=0, max_value=None, value=2)
     safe_retire_age = max(age, retire_age)
     
     r2c1, r2c2, r2c3 = st.columns(3)
-    income = r2c1.number_input(f"Monthly In-hand ({sym})", 0, 10000000, p_data["income"])
+    income = r2c1.number_input(f"Monthly In-hand ({sym})", min_value=0, max_value=None, value=int(p_data["income"]))
     r2c1.caption(f"**{fmt_curr(income, sym, is_inr)}**")
     
     if is_inr:
-        basic_salary = r2c2.number_input("Monthly Basic (for EPF)", 0, income, int(income*0.4))
+        basic_salary = r2c2.number_input("Monthly Basic (for EPF)", min_value=0, max_value=None, value=int(income*0.4))
         r2c2.caption(f"**{fmt_curr(basic_salary, sym, is_inr)}**")
         monthly_pf_inflow = basic_salary * 0.24
         r2c3.info(f"✨ Auto-EPF: {fmt_curr(monthly_pf_inflow, sym, is_inr)}/mo")
@@ -187,56 +187,54 @@ with tab_prof:
         r2c2.empty(); r2c3.empty()
 
     r3c1, r3c2, r3c3 = st.columns(3)
-    living_expense = r3c1.number_input("Monthly Expenses (Ex-Rent)", 0, income, p_data["living_expense"])
+    living_expense = r3c1.number_input("Monthly Expenses (Ex-Rent)", min_value=0, max_value=None, value=int(p_data["living_expense"]))
     r3c1.caption(f"**{fmt_curr(living_expense, sym, is_inr)}**")
-    rent = r3c2.number_input("Monthly Rent", 0, income, p_data["rent"])
+    rent = r3c2.number_input("Monthly Rent", min_value=0, max_value=None, value=int(p_data["rent"]))
     r3c2.caption(f"**{fmt_curr(rent, sym, is_inr)}**")
     tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
     tax_slab = r3c3.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
-    
-    # 🆕 Moved the tax toggle here to Tab 1
     use_post_tax = r3c3.toggle("Calculate post tax returns", True)
 
 with tab_safe:
     r1c1, r1c2, r1c3 = st.columns(3)
-    cash = r1c1.number_input("Cash & Savings", 0, 100000000, p_data["cash"])
+    cash = r1c1.number_input("Cash & Savings", min_value=0, max_value=None, value=int(p_data["cash"]))
     r1c1.caption(f"**{fmt_curr(cash, sym, is_inr)}**")
-    fd = r1c2.number_input("Fixed Deposits", 0, 100000000, p_data["fd"])
+    fd = r1c2.number_input("Fixed Deposits", min_value=0, max_value=None, value=int(p_data["fd"]))
     r1c2.caption(f"**{fmt_curr(fd, sym, is_inr)}**")
-    credit_limit = r1c3.number_input("Credit Card Limit", 0, 10000000, int(income*3))
+    credit_limit = r1c3.number_input("Credit Card Limit", min_value=0, max_value=None, value=int(income*3))
     r1c3.caption(f"**{fmt_curr(credit_limit, sym, is_inr)}**")
     
     r2c1, r2c2, r2c3 = st.columns(3)
-    emi = r2c1.number_input("Current Monthly EMIs", 0, income, 0)
+    emi = r2c1.number_input("Current Monthly EMIs", min_value=0, max_value=None, value=0)
     r2c1.caption(f"**{fmt_curr(emi, sym, is_inr)}**")
-    term_insurance = r2c2.number_input("Term Life Cover", 0, 1000000000, int(income*120))
+    term_insurance = r2c2.number_input("Term Life Cover", min_value=0, max_value=None, value=int(income*120))
     r2c2.caption(f"**{fmt_curr(term_insurance, sym, is_inr)}**")
-    health_insurance = r2c3.number_input("Health Insurance Cover", 0, 50000000, int(income*24))
+    health_insurance = r2c3.number_input("Health Insurance Cover", min_value=0, max_value=None, value=int(income*24))
     r2c3.caption(f"**{fmt_curr(health_insurance, sym, is_inr)}**")
 
 with tab_asset:
     r1c1, r1c2, r1c3 = st.columns(3)
-    epf = r1c1.number_input("EPF/PPF Balance", 0, 100000000, p_data["epf"])
+    epf = r1c1.number_input("EPF/PPF Balance", min_value=0, max_value=None, value=int(p_data.get("epf", 200000 if is_inr else 0)))
     r1c1.caption(f"**{fmt_curr(epf, sym, is_inr)}**")
-    mutual_funds = r1c2.number_input("Mutual Funds", 0, 100000000, p_data["mf"])
+    mutual_funds = r1c2.number_input("Mutual Funds", min_value=0, max_value=None, value=int(p_data["mf"]))
     r1c2.caption(f"**{fmt_curr(mutual_funds, sym, is_inr)}**")
-    stocks = r1c3.number_input("Direct Stocks", 0, 100000000, int(p_data["mf"]*0.3))
+    stocks = r1c3.number_input("Direct Stocks", min_value=0, max_value=None, value=int(p_data["mf"]*0.3))
     r1c3.caption(f"**{fmt_curr(stocks, sym, is_inr)}**")
     
     r2c1, r2c2, r2c3 = st.columns(3)
-    gold = r2c1.number_input("Gold/SGBs", 0, 100000000, 0)
+    gold = r2c1.number_input("Gold/SGBs", min_value=0, max_value=None, value=0)
     r2c1.caption(f"**{fmt_curr(gold, sym, is_inr)}**")
-    arbitrage = r2c2.number_input("Arbitrage Funds", 0, 100000000, 0)
+    arbitrage = r2c2.number_input("Arbitrage Funds", min_value=0, max_value=None, value=0)
     r2c2.caption(f"**{fmt_curr(arbitrage, sym, is_inr)}**")
-    fixed_income = r2c3.number_input("Fixed Income (Bonds/T-Bills)", 0, 100000000, 0)
+    fixed_income = r2c3.number_input("Fixed Income (Bonds/T-Bills)", min_value=0, max_value=None, value=0)
     r2c3.caption(f"**{fmt_curr(fixed_income, sym, is_inr)}**")
 
 with tab_strat:
     r1c1, r1c2, r1c3 = st.columns(3)
-    current_sip = r1c1.number_input("Monthly SIP", 0, income, p_data["sip"])
+    current_sip = r1c1.number_input("Monthly SIP", min_value=0, max_value=None, value=int(p_data["sip"]))
     r1c1.caption(f"**{fmt_curr(current_sip, sym, is_inr)}**")
-    step_up = r1c2.slider("Annual SIP Step-Up %", 0, 20, 10) / 100
-    inflation = r1c3.number_input("General Inflation %", 0.0, 15.0, 6.0 if is_inr else 3.0) / 100
+    step_up = r1c2.slider("Annual SIP Step-Up %", min_value=0, max_value=50, value=10) / 100
+    inflation = r1c3.number_input("General Inflation %", min_value=0.0, max_value=None, value=6.0 if is_inr else 3.0) / 100
     
     r2c1, r2c2, r2c3 = st.columns(3)
     h_options = ["Rent Forever", "Buy a Home", "Already Own"]
@@ -244,26 +242,25 @@ with tab_strat:
     housing_goal = r2c1.selectbox("Housing Plan", options=h_options, index=h_index)
     
     house_cost_default = 5000000 if is_inr else 350000
-    house_cost = r2c2.number_input("Future House Budget", 0, 1000000000, house_cost_default)
+    house_cost = r2c2.number_input("Future House Budget", min_value=0, max_value=None, value=int(house_cost_default))
     r2c2.caption(f"**{fmt_curr(house_cost, sym, is_inr)}**")
     
-    swr = r2c3.number_input("Safe Withdrawal Rate %", 1.0, 10.0, 4.0) / 100
+    swr = r2c3.number_input("Safe Withdrawal Rate %", min_value=0.1, max_value=None, value=4.0) / 100
     
-    # 🆕 Rent inflation perfectly formatted in its own row
     r3c1, r3c2, r3c3 = st.columns(3)
-    rent_inflation = r3c1.number_input("Rent Inflation %", 0.0, 15.0, 8.0 if is_inr else 4.0) / 100
+    rent_inflation = r3c1.number_input("Rent Inflation %", min_value=0.0, max_value=None, value=8.0 if is_inr else 4.0) / 100
     
     st.markdown("**Expected Returns (%)**")
     rr1, rr2, rr3, rr4 = st.columns(4)
-    rate_sip = rr1.number_input("SIP", value=12.0)/100
-    rate_equity = rr2.number_input("Direct Equity", value=12.0)/100
-    rate_fd = rr3.number_input("FD", value=7.0 if is_inr else 4.0)/100
-    rate_epf = rr4.number_input("EPF", value=8.1 if is_inr else 6.0)/100
+    rate_sip = rr1.number_input("SIP", min_value=-50.0, max_value=None, value=12.0)/100
+    rate_equity = rr2.number_input("Direct Equity", min_value=-50.0, max_value=None, value=12.0)/100
+    rate_fd = rr3.number_input("FD", min_value=-50.0, max_value=None, value=7.0 if is_inr else 4.0)/100
+    rate_epf = rr4.number_input("EPF", min_value=-50.0, max_value=None, value=8.1 if is_inr else 6.0)/100
     
     rr5, rr6, rr7, rr8 = st.columns(4)
-    rate_gold = rr5.number_input("Gold", value=8.0 if is_inr else 5.0)/100
-    rate_arbitrage = rr6.number_input("Arbitrage", value=7.5 if is_inr else 4.5)/100
-    rate_fixed = rr7.number_input("Debt/ Bonds", value=7.5 if is_inr else 4.5)/100
+    rate_gold = rr5.number_input("Gold", min_value=-50.0, max_value=None, value=8.0 if is_inr else 5.0)/100
+    rate_arbitrage = rr6.number_input("Arbitrage", min_value=-50.0, max_value=None, value=7.5 if is_inr else 4.5)/100
+    rate_fixed = rr7.number_input("Debt/ Bonds", min_value=-50.0, max_value=None, value=7.5 if is_inr else 4.5)/100
 
 st.divider()
 
@@ -329,7 +326,6 @@ calc_in = {
 df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
-    # 🔧 FORCE PURE TYPES FOR ALTAIR
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
@@ -345,14 +341,12 @@ if not df.empty:
     st.subheader("📊 Wealth Forecast")
     zoom = st.toggle("🔍 Default Zoom", value=True)
 
-    # 🚀 THE BULLETPROOF ZOOM FIX: Slice the DataFrame directly
     if zoom and practical_age < 100:
         end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
         plot_df = df[df['Age'] <= end_v].copy()
     else:
         plot_df = df.copy()
 
-    # 🇮🇳 RESTORED Y-AXIS FORMATTING LOGIC
     if is_inr:
         chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
     else:
@@ -382,7 +376,6 @@ if not df.empty:
         opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
     ).transform_filter(sel)
     
-    # Render with modern width specification
     st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
 
     st.divider()
@@ -409,7 +402,7 @@ if not df.empty:
             st.info(f"💡 **Tax Tip:** {arbitrage_advice['msg']}")
 
 # ==========================================
-# 💾 DB AUTO-SAVE (NOW CAPTURES EVERYTHING)
+# 💾 DB AUTO-SAVE 
 # ==========================================
 if st.session_state.get('has_interacted', False):
     payload = {
@@ -423,17 +416,13 @@ if st.session_state.get('has_interacted', False):
         "swr": swr, "rate_new_sip": rate_sip, "rate_fd": rate_fd, "rate_epf": rate_epf, 
         "rate_equity": rate_equity, "rate_gold": rate_gold, "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, 
         "total_liquidity": total_liq, "net_worth": net_worth,
-        
-        # 🆕 Computed Metrics safely passed
         "practical_age": practical_age if 'practical_age' in locals() else None,
         "gap_val": gap_val if 'gap_val' in locals() else None,
         "extra_sip_req": extra_sip_req if 'extra_sip_req' in locals() else None
     }
     if supabase:
-        try: 
-            supabase.table("user_data").upsert(payload).execute()
-        except Exception as e: 
-            st.sidebar.error(f"DB Error: {e}")
+        try: supabase.table("user_data").upsert(payload).execute()
+        except Exception as e: st.sidebar.error(f"DB Error: {e}")
 else:
     st.session_state['has_interacted'] = True
 
