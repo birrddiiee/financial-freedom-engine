@@ -47,17 +47,25 @@ def generate_forecast(data):
         # 1. TOTAL WEALTH THIS YEAR
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # 2. REQUIRED CORPUS (The continuous moving goalpost)
+        # 2. REQUIRED CORPUS (The Glide Path Goalpost)
         annual_need = current_expense
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
-        req_corpus = annual_need / swr
+        if current_age <= retire_age:
+            # Accumulation phase: You need the full SWR multiple (e.g., 25x)
+            req_corpus = annual_need / swr
+            if housing_goal == "Buy a Home":
+                req_corpus += house_cost
+        else:
+            # Decumulation Phase (The Glide Path Fix):
+            # You don't need 25x expenses at age 90. You only need to cover remaining years.
+            years_remaining = max(1, 100 - current_age)
+            max_multiple = 1 / swr
+            # Smoothly transition the requirement down as you age
+            current_multiple = min(max_multiple, years_remaining)
+            req_corpus = annual_need * current_multiple
         
-        if housing_goal == "Buy a Home" and current_age <= retire_age:
-            req_corpus += house_cost
-        
-        # Log the snapshot for the chart
         forecast.append({
             "Age": current_age,
             "Projected Wealth": total_wealth,
@@ -70,12 +78,10 @@ def generate_forecast(data):
         
         # 3. CASH FLOW FOR NEXT YEAR
         if current_age < retire_age:
-            # Working Years: Add SIPs and EPF
             epf += (epf * r_epf) + (monthly_pf * 12)
             sip_corpus += (sip_corpus * r_sip) + annual_sip
             annual_sip *= (1 + step_up) 
             
-            # Compound everything else
             cash += cash * r_cash
             fd += fd * r_fd
             fixed_income += fixed_income * r_fixed
@@ -83,12 +89,10 @@ def generate_forecast(data):
             gold += gold * r_gold
             equity += equity * r_eq
         else:
-            # Retirement Years: Stop SIPs, and safely deduct living expenses
             total_outflow = annual_need
             if housing_goal == "Buy a Home" and current_age == retire_age:
                 total_outflow += house_cost 
                 
-            # SAFE DRAWDOWN LOGIC: Drain assets sequentially, stop at 0 to prevent negative bugs
             rem = total_outflow
             
             if cash >= rem: cash -= rem; rem = 0
@@ -115,7 +119,6 @@ def generate_forecast(data):
             if epf >= rem: epf -= rem; rem = 0
             elif epf > 0: rem -= epf; epf = 0
             
-            # Compound only what is left
             cash += cash * r_cash
             fd += fd * r_fd
             fixed_income += fixed_income * r_fixed
@@ -135,7 +138,6 @@ def generate_forecast(data):
 
 def solve_extra_sip_needed(gap, years, rate, step_up):
     if gap <= 0 or years <= 0: return 0.0
-    
     low, high = 0.0, gap
     best = high
     for _ in range(50): 
@@ -145,11 +147,9 @@ def solve_extra_sip_needed(gap, years, rate, step_up):
         for y in range(years):
             fv = (fv + annual_sip) * (1 + rate)
             annual_sip *= (1 + step_up)
-            
         if fv >= gap:
             best = mid
             high = mid
         else:
             low = mid
-            
     return round(best / 12, 2)
