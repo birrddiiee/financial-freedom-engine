@@ -35,7 +35,7 @@ def fmt_curr(num, symbol, is_inr_mode):
         return f"{symbol}{num}"
 
 # ==========================================
-# 🎨 CUSTOM CSS: MINIMALISM & iOS MOBILE GRID
+# 🎨 CUSTOM CSS
 # ==========================================
 custom_css = """
 <style>
@@ -55,7 +55,7 @@ custom_css = """
     div[data-testid="stTabs"] button[data-baseweb="tab"] { flex: 1 !important; justify-content: center !important; background-color: #111 !important; border-radius: 4px 4px 0 0 !important; }
     div[data-testid="stTabs"] button[data-baseweb="tab"] p { font-size: 0.9rem !important; font-weight: 600 !important; }
 
-    /* --- iOS/WebKit MOBILE RESPONSIVENESS --- */
+    /* iOS/WebKit MOBILE RESPONSIVENESS */
     @media (max-width: 768px) {
         .stMarkdown p, .stText, label { font-size: 0.8rem !important; }
         [data-testid="stMetricValue"] > div { font-size: 1.4rem !important; }
@@ -161,7 +161,7 @@ else:
 st.divider()
 
 # ==========================================
-# 🎛️ INPUT TABS (WATERTIGHT - ALL UPPER LIMITS REMOVED)
+# 🎛️ INPUT TABS
 # ==========================================
 tab_prof, tab_safe, tab_asset, tab_strat = st.tabs(["1️⃣ Profile", "2️⃣ Safety", "3️⃣ Assets", "4️⃣ Strategy"])
 
@@ -242,13 +242,16 @@ with tab_strat:
     housing_goal = r2c1.selectbox("Housing Plan", options=h_options, index=h_index)
     
     house_cost_default = 5000000 if is_inr else 350000
-    house_cost = r2c2.number_input("Dream House Cost (Today's Value)", min_value=0, max_value=None, value=int(house_cost_default))
+    house_cost = r2c2.number_input("House Cost (Today's Value)", min_value=0, max_value=None, value=int(house_cost_default))
     r2c2.caption(f"**{fmt_curr(house_cost, sym, is_inr)}**")
     
     swr = r2c3.number_input("Safe Withdrawal Rate %", min_value=0.1, max_value=None, value=4.0) / 100
     
-    r3c1, r3c2, r3c3 = st.columns(3)
+    r3c1, r3c2 = st.columns(2)
     rent_inflation = r3c1.number_input("Rent Inflation %", min_value=0.0, max_value=None, value=8.0 if is_inr else 4.0) / 100
+    
+    # 💀 DIE WITH ZERO MODE TOGGLE
+    dwz_mode = r3c2.toggle("💀 Die With Zero Mode (Retire Early)", value=False, help="Instead of blindly saving 25x your expenses to preserve capital forever, this calculates the exact mathematical minimum needed to safely reach age 120. This usually shrinks your target drastically and allows you to retire earlier!")
     
     st.markdown("**Expected Returns (%)**")
     rr1, rr2, rr3, rr4 = st.columns(4)
@@ -320,13 +323,12 @@ calc_in = {
     "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal, "cash": cash, "fd": fd, "epf": epf,
     "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income,
     "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, 
-    "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_bond
+    "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_bond, "dwz_mode": dwz_mode
 }
 
 df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
-    # 🔧 FORCE PURE TYPES FOR ALTAIR
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
@@ -334,7 +336,6 @@ if not df.empty:
     if 'Annual Expense' in df.columns:
         df['Annual Expense'] = df['Annual Expense'].astype(float)
 
-    # Calculate True FI age from backend
     practical_age = int(calculator.calculate_true_fi_age(calc_in))
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
@@ -359,7 +360,6 @@ if not df.empty:
     else:
         plot_df = df.copy()
 
-    # 🚀 THE FIX: INDIAN TOOLTIP FORMATTING
     def tooltip_fmt(val, is_inr):
         if is_inr:
             if val >= 10000000: return f"₹ {val/10000000:.2f} Cr"
@@ -370,13 +370,11 @@ if not df.empty:
             elif val >= 1000: return f"{sym} {val/1000:.0f} k"
             else: return f"{sym} {val:,.0f}"
 
-    # Generate custom strings for the hover banner
     plot_df['Wealth_Fmt'] = plot_df['Projected Wealth'].apply(lambda x: tooltip_fmt(x, is_inr))
     plot_df['Target_Fmt'] = plot_df['Required Corpus'].apply(lambda x: tooltip_fmt(x, is_inr))
     plot_df['Expense_Fmt'] = plot_df['Annual Expense'].apply(lambda x: tooltip_fmt(x, is_inr))
     plot_df['Gap_Fmt'] = plot_df['Gap'].apply(lambda x: tooltip_fmt(x, is_inr))
 
-    # Formatting for the Y-Axis
     if is_inr:
         chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
     else:
@@ -400,7 +398,6 @@ if not df.empty:
     else:
         layers = [c1, c2]
     
-    # Tooltip now points to the new _Fmt columns
     pt = base.mark_point().encode(
         opacity=alt.value(0), 
         tooltip=[
@@ -417,6 +414,10 @@ if not df.empty:
     ).transform_filter(sel)
     
     st.altair_chart(alt.layer(*layers, pt, rl), width="stretch")
+    
+    # 💡 EXPLAINING THE "SUDDEN DIP" AT RETIREMENT
+    if housing_goal == "Buy a Home":
+        st.info(f"💡 **Why the sudden drop near age {max(safe_retire_age, practical_age)}?** Because you selected 'Buy a Home', the calculator mathematically deducts the massive, inflation-adjusted cost of your dream house from your portfolio on the exact year you retire. The Red Target line also drops because you no longer need to save for it!")
 
     st.divider()
 
@@ -433,8 +434,8 @@ if not df.empty:
         st.markdown("### 📅 Practical Reality")
         if practical_age <= age: 
             st.success("🎉 You are Financially Independent (FI) right now!")
-        elif practical_age > 100: 
-            st.error("⚠️ Financial Freedom not possible even by Age 100 with current settings.")
+        elif practical_age >= 120: 
+            st.error("⚠️ Financial Freedom not possible even by Age 120 with current settings.")
         else: 
             st.warning(f"⚠️ Practical Financial Freedom Age: **{practical_age}**")
         
@@ -453,7 +454,7 @@ if st.session_state.get('has_interacted', False):
         "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf, "mutual_funds": mutual_funds, 
         "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income, "current_sip": current_sip, 
         "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost, "inflation": inflation, 
-        "swr": swr, "rate_new_sip": rate_sip, "rate_fd": rate_fd, "rate_epf": rate_epf, 
+        "swr": swr, "dwz_mode": dwz_mode, "rate_new_sip": rate_sip, "rate_fd": rate_fd, "rate_epf": rate_epf, 
         "rate_equity": rate_equity, "rate_gold": rate_gold, "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, 
         "total_liquidity": total_liq, "net_worth": net_worth,
         "practical_age": practical_age if 'practical_age' in locals() else None,

@@ -1,7 +1,7 @@
 import pandas as pd
 
 def calculate_true_fi_age(data):
-    """Simulates continuous working and SIPs until the FI target is naturally reached."""
+    """Simulates continuous working until the FI target (or DWZ target) is naturally reached."""
     age = data['age']
     living_expense = data['living_expense']
     rent = data['rent']
@@ -13,6 +13,7 @@ def calculate_true_fi_age(data):
     house_cost = data['house_cost']
     housing_goal = data['housing_goal']
     monthly_pf = data['monthly_pf']
+    dwz_mode = data.get('dwz_mode', False)
     
     cash, fd, epf = data['cash'], data['fd'], data['epf']
     equity = data['mutual_funds'] + data['stocks']
@@ -21,6 +22,9 @@ def calculate_true_fi_age(data):
     r_cash, r_fd, r_epf, r_eq = data['rate_savings'], data['rate_fd'], data['rate_epf'], data['rate_equity']
     r_sip = data.get('rate_new_sip', r_eq) 
     r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
+    
+    # DWZ Blended Return (Assuming a safer 60/40 Equity/Debt split in retirement)
+    r_dwz = (r_eq * 0.6) + (r_fixed * 0.4)
     
     current_expense = living_expense * 12
     current_rent = rent * 12
@@ -35,15 +39,28 @@ def calculate_true_fi_age(data):
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
-        req_corpus = annual_need / swr
+        years_remaining = max(0, 120 - current_age)
+        
+        # 💀 DIE WITH ZERO MATH vs TRADITIONAL SWR
+        if dwz_mode:
+            if abs(r_dwz - inflation) < 0.0001:
+                current_multiple = years_remaining
+            else:
+                ratio = (1 + inflation) / (1 + r_dwz)
+                current_multiple = ((1 - (ratio ** years_remaining)) / (r_dwz - inflation)) * (1 + r_dwz)
+        else:
+            max_multiple = 1 / swr
+            current_multiple = min(max_multiple, years_remaining)
+            
+        req_corpus = annual_need * current_multiple
         if housing_goal == "Buy a Home":
             req_corpus += house_cost
             
-        # Stop and return the age the moment wealth crosses the target
+        # Stop and return age the moment wealth crosses the target
         if total_wealth >= req_corpus:
             return current_age
             
-        # Continue working and accumulating
+        # Continue accumulating
         epf += (epf * r_epf) + (monthly_pf * 12)
         sip_corpus += (sip_corpus * r_sip) + annual_sip
         annual_sip *= (1 + step_up) 
@@ -66,10 +83,7 @@ def generate_forecast(data):
     age = data['age']
     desired_retire_age = data['retire_age']
     
-    # 🚀 THE NEW LOGIC: Calculate True FI Age first
     true_fi_age = calculate_true_fi_age(data)
-    
-    # If desired age is impossible, force the simulation to keep working until FI is reached
     effective_retire_age = max(desired_retire_age, true_fi_age)
     
     living_expense = data['living_expense']
@@ -82,6 +96,7 @@ def generate_forecast(data):
     house_cost = data['house_cost']
     housing_goal = data['housing_goal']
     monthly_pf = data['monthly_pf']
+    dwz_mode = data.get('dwz_mode', False)
     
     cash, fd, epf = data['cash'], data['fd'], data['epf']
     equity = data['mutual_funds'] + data['stocks']
@@ -90,6 +105,8 @@ def generate_forecast(data):
     r_cash, r_fd, r_epf, r_eq = data['rate_savings'], data['rate_fd'], data['rate_epf'], data['rate_equity']
     r_sip = data.get('rate_new_sip', r_eq) 
     r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
+    
+    r_dwz = (r_eq * 0.6) + (r_fixed * 0.4)
     
     forecast = []
     current_expense = living_expense * 12
@@ -108,8 +125,16 @@ def generate_forecast(data):
             annual_need += current_rent
             
         years_remaining = max(0, 120 - current_age)
-        max_multiple = 1 / swr
-        current_multiple = min(max_multiple, years_remaining)
+        
+        if dwz_mode:
+            if abs(r_dwz - inflation) < 0.0001:
+                current_multiple = years_remaining
+            else:
+                ratio = (1 + inflation) / (1 + r_dwz)
+                current_multiple = ((1 - (ratio ** years_remaining)) / (r_dwz - inflation)) * (1 + r_dwz)
+        else:
+            max_multiple = 1 / swr
+            current_multiple = min(max_multiple, years_remaining)
         
         req_corpus = annual_need * current_multiple
         
@@ -127,7 +152,6 @@ def generate_forecast(data):
         if current_age == 120: 
             break
         
-        # 🚀 Cash flow drops to zero ONLY when effective_retire_age is reached
         if current_age < effective_retire_age:
             epf += (epf * r_epf) + (monthly_pf * 12)
             sip_corpus += (sip_corpus * r_sip) + annual_sip
