@@ -15,7 +15,7 @@ def generate_forecast(data):
     housing_goal = data['housing_goal']
     monthly_pf = data['monthly_pf']
     
-    # Initial Balances 
+    # Initial Balances
     cash = data['cash']
     fd = data['fd']
     epf = data['epf']
@@ -47,14 +47,13 @@ def generate_forecast(data):
         # 1. TOTAL WEALTH THIS YEAR
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
-        # 2. REQUIRED CORPUS (The continuous moving goalpost!)
+        # 2. REQUIRED CORPUS (The continuous moving goalpost)
         annual_need = current_expense
         if housing_goal == "Rent Forever":
             annual_need += current_rent
             
         req_corpus = annual_need / swr
         
-        # Keep the house cost in the goal until the year you actually buy it
         if housing_goal == "Buy a Home" and current_age <= retire_age:
             req_corpus += house_cost
         
@@ -75,30 +74,58 @@ def generate_forecast(data):
             epf += (epf * r_epf) + (monthly_pf * 12)
             sip_corpus += (sip_corpus * r_sip) + annual_sip
             annual_sip *= (1 + step_up) 
-        else:
-            # Retirement Years: Stop SIPs, and DEDUCT living expenses!
-            epf += epf * r_epf 
             
+            # Compound everything else
+            cash += cash * r_cash
+            fd += fd * r_fd
+            fixed_income += fixed_income * r_fixed
+            arbitrage += arbitrage * r_arb
+            gold += gold * r_gold
+            equity += equity * r_eq
+        else:
+            # Retirement Years: Stop SIPs, and safely deduct living expenses
             total_outflow = annual_need
             if housing_goal == "Buy a Home" and current_age == retire_age:
-                total_outflow += house_cost # Pay for the house in lump sum
+                total_outflow += house_cost 
                 
-            # Deduct expenses from the portfolio (pulling from SIP/Equity first)
-            if sip_corpus >= total_outflow:
-                sip_corpus -= total_outflow
-            else:
-                equity -= (total_outflow - sip_corpus)
-                sip_corpus = 0
-                
-        # 4. COMPOUND ALL ASSETS
-        equity += equity * r_eq
-        gold += gold * r_gold
-        arbitrage += arbitrage * r_arb
-        fixed_income += fixed_income * r_fixed
-        fd += fd * r_fd
-        cash += cash * r_cash
-        
-        # 5. APPLY INFLATION
+            # SAFE DRAWDOWN LOGIC: Drain assets sequentially, stop at 0 to prevent negative bugs
+            rem = total_outflow
+            
+            if cash >= rem: cash -= rem; rem = 0
+            elif cash > 0: rem -= cash; cash = 0
+            
+            if fd >= rem: fd -= rem; rem = 0
+            elif fd > 0: rem -= fd; fd = 0
+            
+            if fixed_income >= rem: fixed_income -= rem; rem = 0
+            elif fixed_income > 0: rem -= fixed_income; fixed_income = 0
+            
+            if arbitrage >= rem: arbitrage -= rem; rem = 0
+            elif arbitrage > 0: rem -= arbitrage; arbitrage = 0
+            
+            if gold >= rem: gold -= rem; rem = 0
+            elif gold > 0: rem -= gold; gold = 0
+            
+            if sip_corpus >= rem: sip_corpus -= rem; rem = 0
+            elif sip_corpus > 0: rem -= sip_corpus; sip_corpus = 0
+            
+            if equity >= rem: equity -= rem; rem = 0
+            elif equity > 0: rem -= equity; equity = 0
+            
+            if epf >= rem: epf -= rem; rem = 0
+            elif epf > 0: rem -= epf; epf = 0
+            
+            # Compound only what is left
+            cash += cash * r_cash
+            fd += fd * r_fd
+            fixed_income += fixed_income * r_fixed
+            arbitrage += arbitrage * r_arb
+            gold += gold * r_gold
+            equity += equity * r_eq
+            sip_corpus += sip_corpus * r_sip
+            epf += epf * r_epf
+            
+        # 4. APPLY INFLATION
         current_expense *= (1 + inflation)
         current_rent *= (1 + rent_inflation)
         if housing_goal == "Buy a Home" and current_age < retire_age:
