@@ -117,7 +117,7 @@ with col_title:
     st.markdown("A tax-aware wealth simulator built for realistic planning.")
 
 # ==========================================
-# 👤 PERSONA SELECTOR
+# 👤 PERSONA SELECTOR & DWZ TOGGLE
 # ==========================================
 if is_inr:
     cl_p, cd_p = st.columns([1, 2])
@@ -157,6 +157,14 @@ else:
         "age": 30, "retire_age": 60, "income": 5000, "rent": 1500, "living_expense": 2000,
         "cash": 10000, "fd": 20000, "epf": 10000, "mf": 15000, "sip": 1000, "housing": "Rent Forever"
     }
+
+st.markdown("<br>", unsafe_allow_html=True)
+# 💀 FRONT AND CENTER: DIE WITH ZERO MODE
+dwz_mode = st.toggle(
+    "💀 **Die With Zero Mode (Retire Early)**", 
+    value=False, 
+    help="Instead of blindly saving 25x your expenses to preserve capital forever, this calculates the exact mathematical minimum needed to safely reach age 120. This usually shrinks your target drastically and allows you to retire earlier!"
+)
 
 st.divider()
 
@@ -247,11 +255,8 @@ with tab_strat:
     
     swr = r2c3.number_input("Safe Withdrawal Rate %", min_value=0.1, max_value=None, value=4.0) / 100
     
-    r3c1, r3c2 = st.columns(2)
+    r3c1, r3c2, r3c3 = st.columns(3)
     rent_inflation = r3c1.number_input("Rent Inflation %", min_value=0.0, max_value=None, value=8.0 if is_inr else 4.0) / 100
-    
-    # 💀 DIE WITH ZERO MODE TOGGLE
-    dwz_mode = r3c2.toggle("💀 Die With Zero Mode (Retire Early)", value=False, help="Instead of blindly saving 25x your expenses to preserve capital forever, this calculates the exact mathematical minimum needed to safely reach age 120. This usually shrinks your target drastically and allows you to retire earlier!")
     
     st.markdown("**Expected Returns (%)**")
     rr1, rr2, rr3, rr4 = st.columns(4)
@@ -415,7 +420,6 @@ if not df.empty:
     
     st.altair_chart(alt.layer(*layers, pt, rl), width="stretch")
     
-    # 💡 EXPLAINING THE "SUDDEN DIP" AT RETIREMENT
     if housing_goal == "Buy a Home":
         st.info(f"💡 **Why the sudden drop near age {max(safe_retire_age, practical_age)}?** Because you selected 'Buy a Home', the calculator mathematically deducts the massive, inflation-adjusted cost of your dream house from your portfolio on the exact year you retire. The Red Target line also drops because you no longer need to save for it!")
 
