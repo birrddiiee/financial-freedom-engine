@@ -395,81 +395,88 @@ render_card(col_l6, diagnostics['peace'], "6. Peace Fund")
 st.divider()
 st.subheader("📈 Wealth Projection")
 
+# ==========================================
+# 📈 WEALTH PROJECTION & CHART (BULLETPROOF)
+# ==========================================
+eff_eq = logic.calculate_post_tax_rate(rate_eq, "Equity", tax_slab, use_post_tax)
 eff_fd = logic.calculate_post_tax_rate(rate_fd, "FD", tax_slab, use_post_tax)
-eff_arb = logic.calculate_post_tax_rate(rate_arbitrage, "Arbitrage", tax_slab, use_post_tax)
-eff_eq = logic.calculate_post_tax_rate(rate_equity, "Equity", tax_slab, use_post_tax)
-eff_gold = logic.calculate_post_tax_rate(rate_gold, "Gold", tax_slab, use_post_tax)
 eff_epf = logic.calculate_post_tax_rate(rate_epf, "EPF", tax_slab, use_post_tax)
-eff_sip = logic.calculate_post_tax_rate(rate_new_sip, "Equity", tax_slab, use_post_tax)
-eff_fixed = logic.calculate_post_tax_rate(rate_fixed, "Debt", tax_slab, use_post_tax)
+eff_gold = logic.calculate_post_tax_rate(rate_gold, "Gold", tax_slab, use_post_tax)
+eff_arb = logic.calculate_post_tax_rate(rate_arb, "Arbitrage", tax_slab, use_post_tax)
+eff_bond = logic.calculate_post_tax_rate(rate_bond, "Debt", tax_slab, use_post_tax)
 
-user_data_calc = {
-    "age": age, "retire_age": safe_retire_age, "living_expense": living_expense, "rent": rent,
-    "current_sip": current_sip, "monthly_pf": monthly_pf_inflow, "step_up": step_up,
-    "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal,
-    "cash": cash, "fd": fd, "epf": epf, "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage,
-    "fixed_income": fixed_income,
-    "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_fixed
+calc_in = {
+    "age": age, "retire_age": safe_retire_age, "living_expense": living, "rent": rent, "current_sip": sip,
+    "monthly_pf": epf_calc, "step_up": step, "inflation": inf, "rent_inflation": 0.08 if is_inr else 0.04,
+    "swr": swr_rate, "house_cost": house_cost, "housing_goal": housing, "cash": cash, "fd": fd, "epf": epf_total,
+    "mutual_funds": mf_total, "stocks": stock_total, "gold": gold, "arbitrage": arb, "fixed_income": bonds,
+    "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, 
+    "rate_fd": eff_fd, "rate_new_sip": eff_eq, "rate_fixed": eff_bond
 }
 
-df = calculator.generate_forecast(user_data_calc)
+df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
-    # 🔧 FORCE PURE PYTHON TYPES SO ALTAIR DOES NOT CRASH SILENTLY
+    # 🔧 FORCE PURE TYPES
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
     df['Gap'] = df['Gap'].astype(float)
 
-    freedom_row = df[df['Gap'] >= 0]
-    practical_age = int(freedom_row.iloc[0]['Age']) if not freedom_row.empty else 100
+    freedom = df[df['Gap'] >= 0]
+    practical_age = int(freedom.iloc[0]['Age']) if not freedom.empty else 100
 
-    col_toggle, _ = st.columns([1, 3])
-    with col_toggle:
-        zoom = st.toggle("🔍 Default Zoom", value=True)
+    target_row = df[df['Age'] == safe_retire_age].iloc[0]
+    gap_val = float(target_row['Gap'])
+    extra_sip = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step)) if gap_val < 0 else 0.0
 
-    if zoom and practical_age < 100:
-        end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
-        view_x_domain = [int(age), end_v]
-        temp_df = df[df['Age'] <= end_v]
-        max_y = float(max(temp_df['Projected Wealth'].max(), temp_df['Required Corpus'].max()) * 1.1)
-        view_y_domain = [0.0, max_y]
+    st.subheader("📊 Wealth Forecast")
+    
+    # 🆕 ADDED A SAFE MODE TOGGLE
+    c_tog1, c_tog2, _ = st.columns([1, 1, 2])
+    zoom = c_tog1.toggle("🔍 Default Zoom", value=True)
+    safe_mode = c_tog2.toggle("🚑 Safe Mode Chart", value=False)
+
+    if safe_mode:
+        # 🟢 BULLETPROOF FALLBACK: Native Streamlit Chart (Cannot crash)
+        st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']], height=400)
     else:
-        view_x_domain = [int(age), 100]
-        max_y = float(max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1)
-        view_y_domain = [0.0, max_y]
+        # 🔵 ALTAIR CHART (With Safety Nets)
+        if zoom and practical_age < 100:
+            end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
+            view_x = [int(age), max(int(age) + 1, end_v)] # Prevents [30, 30] crash
+            temp_df = df[df['Age'] <= end_v]
+            max_y = float(max(temp_df['Projected Wealth'].max(), temp_df['Required Corpus'].max()) * 1.1)
+        else:
+            view_x = [int(age), 100]
+            max_y = float(max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1)
 
-    if is_inr:
-        chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
-    else:
-        chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
+        # Prevents [0.0, 0.0] crash
+        if pd.isna(max_y) or max_y <= 0:
+            max_y = 100000.0 
+            
+        view_y = [0.0, max_y]
 
-    # 🔧 ADDED :Q TO EXPLICITLY TELL ALTAIR THIS IS QUANTITATIVE DATA
-    base = alt.Chart(df).encode(x=alt.X('Age:Q', scale=alt.Scale(domain=view_x_domain), axis=alt.Axis(format='d')))
-    nearest = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
-
-    line_wealth = base.mark_line(color='#00FF00', strokeWidth=3).encode(
-        y=alt.Y('Projected Wealth:Q', scale=alt.Scale(domain=view_y_domain), axis=alt.Axis(labelExpr=chart_fmt, title=f'Amount ({sym})'))
-    )
-    line_req = base.mark_line(color='#FF0000', strokeDash=[5, 5]).encode(y='Required Corpus:Q')
-
-    selectors = base.mark_point().encode(
-        opacity=alt.value(0),
-        tooltip=[
-            alt.Tooltip('Age:Q', title='Age'),
-            alt.Tooltip('Projected Wealth:Q', format=',.0f', title=f'Wealth ({sym})'),
-            alt.Tooltip('Required Corpus:Q', format=',.0f', title=f'Target ({sym})'),
-            alt.Tooltip('Gap:Q', format=',.0f', title=f'Surplus/Gap ({sym})')
-        ]
-    ).add_params(nearest)
-
-    rules = base.mark_rule(color='gray').encode(
-        opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
-    ).transform_filter(nearest)
-
-    st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), width="stretch")
+        base = alt.Chart(df).encode(x=alt.X('Age:Q', scale=alt.Scale(domain=view_x), axis=alt.Axis(format='d')))
+        sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
+        
+        # Note: labelExpr removed temporarily to ensure stability
+        c1 = base.mark_line(color='#00FF00', strokeWidth=3).encode(
+            y=alt.Y('Projected Wealth:Q', scale=alt.Scale(domain=view_y), title=f"Amount ({sym})")
+        )
+        c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(y='Required Corpus:Q')
+        pt = base.mark_point().encode(opacity=alt.value(0), tooltip=['Age:Q', alt.Tooltip('Projected Wealth:Q', format=',.0f'), alt.Tooltip('Required Corpus:Q', format=',.0f'), alt.Tooltip('Gap:Q', format=',.0f')]).add_params(sel)
+        rl = base.mark_rule(color='gray').encode(opacity=alt.condition(sel, alt.value(0.5), alt.value(0))).transform_filter(sel)
+        
+        try:
+            # The explicit width='stretch' fix
+            st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
+        except Exception as e:
+            st.error(f"Chart Render Error: {e}")
+            st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']])
 
     st.divider()
+    
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
 
