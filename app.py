@@ -161,7 +161,7 @@ else:
 st.markdown("<br>", unsafe_allow_html=True)
 # 💀 FRONT AND CENTER: DIE WITH ZERO MODE
 dwz_mode = st.toggle(
-    "💀 **Die With Zero Mode (Retire Early)**", 
+    "💀 **Die With Zero Mode (Retire Early). See the grap changing**", 
     value=False, 
     help="Instead of blindly saving 25x your expenses to preserve capital forever, this calculates the exact mathematical minimum needed to safely reach age 120. This usually shrinks your target drastically and allows you to retire earlier!"
 )

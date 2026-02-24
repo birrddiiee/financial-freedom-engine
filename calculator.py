@@ -1,7 +1,15 @@
 import pandas as pd
 
+def get_actual_return(cash, fd, fixed_income, arbitrage, gold, equity, sip_corpus, epf,
+                      r_cash, r_fd, r_fixed, r_arb, r_gold, r_eq, r_sip, r_epf):
+    """Calculates the exact weighted average return of the current portfolio."""
+    total = cash + fd + fixed_income + arbitrage + gold + equity + sip_corpus + epf
+    if total <= 0:
+        return r_eq # Fallback assumption if no assets exist yet
+    return (cash*r_cash + fd*r_fd + fixed_income*r_fixed + arbitrage*r_arb + 
+            gold*r_gold + equity*r_eq + sip_corpus*r_sip + epf*r_epf) / total
+
 def calculate_true_fi_age(data):
-    """Simulates continuous working until the FI target (or DWZ target) is naturally reached."""
     age = data['age']
     living_expense = data['living_expense']
     rent = data['rent']
@@ -23,9 +31,6 @@ def calculate_true_fi_age(data):
     r_sip = data.get('rate_new_sip', r_eq) 
     r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
     
-    # 🚀 FIX 1: DWZ uses the power of your Equity rate, ensuring the target actually drops!
-    r_dwz = r_eq
-    
     current_expense = living_expense * 12
     current_rent = rent * 12
     sip_corpus = 0.0
@@ -35,6 +40,10 @@ def calculate_true_fi_age(data):
         current_age = age + yr
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
+        # Calculate the exact return of the portfolio this year
+        actual_return = get_actual_return(cash, fd, fixed_income, arbitrage, gold, equity, sip_corpus, epf,
+                                          r_cash, r_fd, r_fixed, r_arb, r_gold, r_eq, r_sip, r_epf)
+        
         baseline_annual_need = current_expense
         if housing_goal == "Rent Forever":
             baseline_annual_need += current_rent
@@ -42,13 +51,12 @@ def calculate_true_fi_age(data):
         years_remaining = max(0, 120 - current_age)
         
         if dwz_mode:
-            if abs(r_dwz - inflation) < 0.0001:
+            if abs(actual_return - inflation) < 0.0001:
                 current_multiple = years_remaining
             else:
-                ratio = (1 + inflation) / (1 + r_dwz)
-                current_multiple = ((1 - (ratio ** years_remaining)) / (r_dwz - inflation)) * (1 + r_dwz)
-            # Safeguard: DWZ mathematically can never demand a higher multiple than SWR
-            current_multiple = min(current_multiple, 1 / swr)
+                # True Present Value of growing annuity due
+                ratio = (1 + inflation) / (1 + actual_return)
+                current_multiple = ((1 - (ratio ** years_remaining)) / (actual_return - inflation)) * (1 + actual_return)
         else:
             max_multiple = 1 / swr
             current_multiple = min(max_multiple, years_remaining)
@@ -57,11 +65,9 @@ def calculate_true_fi_age(data):
         if housing_goal == "Buy a Home":
             req_corpus += house_cost
             
-        # Stop and return age the moment wealth crosses the target
         if total_wealth >= req_corpus:
             return current_age
             
-        # Continue accumulating
         epf += (epf * r_epf) + (monthly_pf * 12)
         sip_corpus += (sip_corpus * r_sip) + annual_sip
         annual_sip *= (1 + step_up) 
@@ -107,8 +113,6 @@ def generate_forecast(data):
     r_sip = data.get('rate_new_sip', r_eq) 
     r_gold, r_arb, r_fixed = data.get('rate_gold', 0.08), data.get('rate_arbitrage', 0.07), data.get('rate_fixed', 0.07)
     
-    r_dwz = r_eq
-    
     forecast = []
     current_expense = living_expense * 12
     current_rent = rent * 12
@@ -121,6 +125,9 @@ def generate_forecast(data):
         
         total_wealth = cash + fd + epf + equity + gold + arbitrage + fixed_income + sip_corpus
         
+        actual_return = get_actual_return(cash, fd, fixed_income, arbitrage, gold, equity, sip_corpus, epf,
+                                          r_cash, r_fd, r_fixed, r_arb, r_gold, r_eq, r_sip, r_epf)
+        
         baseline_annual_need = current_expense
         if housing_goal == "Rent Forever":
             baseline_annual_need += current_rent
@@ -128,12 +135,11 @@ def generate_forecast(data):
         years_remaining = max(0, 120 - current_age)
         
         if dwz_mode:
-            if abs(r_dwz - inflation) < 0.0001:
+            if abs(actual_return - inflation) < 0.0001:
                 current_multiple = years_remaining
             else:
-                ratio = (1 + inflation) / (1 + r_dwz)
-                current_multiple = ((1 - (ratio ** years_remaining)) / (r_dwz - inflation)) * (1 + r_dwz)
-            current_multiple = min(current_multiple, 1 / swr)
+                ratio = (1 + inflation) / (1 + actual_return)
+                current_multiple = ((1 - (ratio ** years_remaining)) / (actual_return - inflation)) * (1 + actual_return)
         else:
             max_multiple = 1 / swr
             current_multiple = min(max_multiple, years_remaining)
@@ -143,12 +149,14 @@ def generate_forecast(data):
         if housing_goal == "Buy a Home" and current_age <= effective_retire_age:
             req_corpus += house_cost
             
-        # 🚀 FIX 2: DYNAMIC DECUMULATION (Consume the 700 Cr!)
+        # 🚀 PERFECTED DYNAMIC DECUMULATION
         actual_outflow = baseline_annual_need
-        if dwz_mode and current_age >= effective_retire_age and current_multiple > 0:
-            dwz_dynamic_spend = total_wealth / current_multiple
-            # If you have a massive surplus, spend it! If you don't, stick to baseline.
-            actual_outflow = max(baseline_annual_need, dwz_dynamic_spend)
+        if dwz_mode and current_age >= effective_retire_age:
+            if current_multiple > 0.001:
+                dwz_dynamic_spend = total_wealth / current_multiple
+                actual_outflow = max(baseline_annual_need, dwz_dynamic_spend)
+            else:
+                actual_outflow = total_wealth # Final year dump exactly at 120
         
         forecast.append({
             "Age": current_age,
@@ -173,11 +181,11 @@ def generate_forecast(data):
             gold += gold * r_gold
             equity += equity * r_eq
         else:
-            # Safely withdraw the actual_outflow
             total_outflow = actual_outflow
             if housing_goal == "Buy a Home" and current_age == effective_retire_age:
                 total_outflow += house_cost 
                 
+            # Safely drain sequentially; prevents negative math
             rem = total_outflow
             
             if cash >= rem: cash -= rem; rem = 0
