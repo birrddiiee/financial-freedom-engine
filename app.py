@@ -467,7 +467,7 @@ if not df.empty:
         opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
     ).transform_filter(nearest)
 
-    st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), use_container_width=True)
+    st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), width="stretch")
 
     st.divider()
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
