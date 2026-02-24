@@ -100,21 +100,28 @@ if 'has_interacted' not in st.session_state: st.session_state['has_interacted'] 
 # ==========================================
 # 🖥️ HEADER & REGION
 # ==========================================
-c_title, c_settings = st.columns([3, 1])
-with c_settings:
-    curr_choice = st.selectbox("Region/Currency", options=["🇮🇳 INR (₹)", "🇺🇸 USD ($)", "🇪🇺 EUR (€)", "🇬🇧 GBP (£)"], index=0)
+col_title, col_settings = st.columns([3, 1])
+
+with col_settings:
+    curr_choice = st.selectbox(
+        "🌎 Currency & Region", 
+        options=["🇮🇳 INR (₹)", "🇺🇸 USD ($)", "🇪🇺 EUR (€)", "🇬🇧 GBP (£)", "🇯🇵 JPY (¥)", "🇦🇺 AUD ($)", "🇨🇦 CAD ($)"],
+        index=0
+    )
+    flag = curr_choice.split(" ")[0]
     sym = curr_choice.split("(")[1].replace(")", "")
     is_inr = (sym == "₹")
-with c_title:
-    st.title("Financial Freedom Engine 🚀")
-    st.markdown("A tax-aware wealth simulator built for realistic planning. Please update Profile, Safety, Assets and Strategy sections to see your wealth projection instantly.")
+
+with col_title:
+    st.title(f"{flag} Financial Freedom Engine")
+    st.markdown("A tax-aware wealth simulator built for realistic planning.")
 
 # ==========================================
 # 👤 PERSONA SELECTOR
 # ==========================================
 if is_inr:
     cl_p, cd_p = st.columns([1, 2])
-    cl_p.markdown("<p style='margin-top: 10px; font-weight: 700;'>⚡ Quick Load Profile:</p>", unsafe_allow_html=True)
+    cl_p.markdown("<p style='margin-top: 10px; font-weight: 700;'>⚡ Quick Start: Choose a Profile</p>", unsafe_allow_html=True)
     
     persona_options = [
         "⚙️ Custom (I will enter my own numbers)",
@@ -122,40 +129,57 @@ if is_inr:
         "🏔️ The Family (Stability & Safe Assets Focus)",
         "🔥 The Aggressive FIRE Chaser (High Equity SIPs)"
     ]
-    p_choice = cd_p.selectbox("persona", persona_options, label_visibility="collapsed")
+    selected_persona = cd_p.selectbox("persona_select", persona_options, label_visibility="collapsed")
     
-    p_map = {
-        "💻 The City Techie (High Income, High Rent)": {"age":28, "ret":55, "inc":150000, "rent":35000, "exp":40000, "mf":800000, "sip":40000},
-        "🏔️ The Family (Stability & Safe Assets Focus)": {"age":36, "ret":60, "inc":90000, "rent":15000, "exp":35000, "mf":200000, "sip":15000},
-        "🔥 The Aggressive FIRE Chaser (High Equity SIPs)": {"age":32, "ret":45, "inc":250000, "rent":40000, "exp":60000, "mf":2500000, "sip":100000}
+    personas_data = {
+        "💻 The City Techie (High Income, High Rent)": {
+            "age": 28, "retire_age": 55, "income": 150000, "rent": 35000, "living_expense": 40000,
+            "cash": 100000, "fd": 0, "epf": 300000, "mf": 800000, "sip": 40000, "housing": "Rent Forever"
+        },
+        "🏔️ The Family (Stability & Safe Assets Focus)": {
+            "age": 36, "retire_age": 60, "income": 90000, "rent": 15000, "living_expense": 35000,
+            "cash": 150000, "fd": 500000, "epf": 1200000, "mf": 200000, "sip": 15000, "housing": "Buy a Home"
+        },
+        "🔥 The Aggressive FIRE Chaser (High Equity SIPs)": {
+            "age": 32, "retire_age": 45, "income": 250000, "rent": 40000, "living_expense": 60000,
+            "cash": 300000, "fd": 0, "epf": 800000, "mf": 2500000, "sip": 100000, "housing": "Rent Forever"
+        }
     }
-    p_defaults = p_map.get(p_choice, {"age":30, "ret":60, "inc":100000, "rent":20000, "exp":30000, "mf":150000, "sip":20000})
-    selected_persona = p_choice
+    default_custom = {
+        "age": 30, "retire_age": 60, "income": 100000, "rent": 20000, "living_expense": 30000,
+        "cash": 100000, "fd": 500000, "epf": 200000, "mf": 150000, "sip": 20000, "housing": "Rent Forever"
+    }
+    p_data = personas_data.get(selected_persona, default_custom)
+
 else:
-    p_defaults = {"age":30, "ret":60, "inc":5000, "rent":1500, "exp":2000, "mf":15000, "sip":1000}
-    selected_persona = "Global Default"
+    selected_persona = "🌎 Global Default (No Persona)" 
+    p_data = {
+        "age": 30, "retire_age": 60, "income": 5000, "rent": 1500, "living_expense": 2000,
+        "cash": 10000, "fd": 20000, "epf": 10000, "mf": 15000, "sip": 1000, "housing": "Rent Forever"
+    }
 
 st.divider()
 
 # ==========================================
 # 🎛️ INPUT TABS
 # ==========================================
-tab_prof, tab_safe, tab_asset, tab_strat = st.tabs(["👤 Profile", "🛡️ Safety", "💰 Assets", "🎯 Strategy"])
+tab_prof, tab_safe, tab_asset, tab_strat = st.tabs(["1️⃣ Profile", "2️⃣ Safety", "3️⃣ Assets", "4️⃣ Strategy"])
 
 with tab_prof:
     r1c1, r1c2, r1c3 = st.columns(3)
-    age = r1c1.number_input("Current Age", 18, 100, p_defaults["age"])
-    retire_age = r1c2.number_input("Retire Age", age, 100, p_defaults["ret"])
+    age = r1c1.number_input("Current Age", 18, 100, p_data["age"])
+    default_retire = max(p_data["retire_age"], age)
+    retire_age = r1c2.number_input("Retire Age", age, 100, default_retire)
     dependents = r1c3.number_input("Dependents", 0, 10, 2)
     safe_retire_age = max(age, retire_age)
     
     r2c1, r2c2, r2c3 = st.columns(3)
-    income = r2c1.number_input(f"Monthly In-hand ({sym})", 0, 10000000, p_defaults["inc"])
-    r2c1.caption(fmt_curr(income, sym, is_inr))
+    income = r2c1.number_input(f"Monthly In-hand ({sym})", 0, 10000000, p_data["income"])
+    r2c1.caption(f"**{fmt_curr(income, sym, is_inr)}**")
     
     if is_inr:
         basic_salary = r2c2.number_input("Monthly Basic (for EPF)", 0, income, int(income*0.4))
-        r2c2.caption(fmt_curr(basic_salary, sym, is_inr))
+        r2c2.caption(f"**{fmt_curr(basic_salary, sym, is_inr)}**")
         monthly_pf_inflow = basic_salary * 0.24
         r2c3.info(f"✨ Auto-EPF: {fmt_curr(monthly_pf_inflow, sym, is_inr)}/mo")
     else: 
@@ -163,59 +187,78 @@ with tab_prof:
         r2c2.empty(); r2c3.empty()
 
     r3c1, r3c2, r3c3 = st.columns(3)
-    living_expense = r3c1.number_input("Monthly Expenses (Ex-Rent)", 0, income, p_defaults["exp"])
-    r3c1.caption(fmt_curr(living_expense, sym, is_inr))
-    rent = r3c2.number_input("Monthly Rent", 0, income, p_defaults["rent"])
-    r3c2.caption(fmt_curr(rent, sym, is_inr))
-    tax_slab = r3c3.selectbox("Tax Slab", [0.0, 0.1, 0.2, 0.3, 0.4], index=3, format_func=lambda x: f"{int(x*100)}%")
+    living_expense = r3c1.number_input("Monthly Expenses (Ex-Rent)", 0, income, p_data["living_expense"])
+    r3c1.caption(f"**{fmt_curr(living_expense, sym, is_inr)}**")
+    rent = r3c2.number_input("Monthly Rent", 0, income, p_data["rent"])
+    r3c2.caption(f"**{fmt_curr(rent, sym, is_inr)}**")
+    tax_options = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40]
+    tax_slab = r3c3.selectbox("Tax Slab", options=tax_options, index=6, format_func=lambda x: f"{int(x*100)}%")
 
 with tab_safe:
     r1c1, r1c2, r1c3 = st.columns(3)
-    cash = r1c1.number_input("Cash & Savings", 0, 100000000, 100000)
-    r1c1.caption(fmt_curr(cash, sym, is_inr))
-    fd = r1c2.number_input("Fixed Deposits", 0, 100000000, 200000)
-    r1c2.caption(fmt_curr(fd, sym, is_inr))
+    cash = r1c1.number_input("Cash & Savings", 0, 100000000, p_data["cash"])
+    r1c1.caption(f"**{fmt_curr(cash, sym, is_inr)}**")
+    fd = r1c2.number_input("Fixed Deposits", 0, 100000000, p_data["fd"])
+    r1c2.caption(f"**{fmt_curr(fd, sym, is_inr)}**")
     credit_limit = r1c3.number_input("Credit Card Limit", 0, 10000000, int(income*3))
+    r1c3.caption(f"**{fmt_curr(credit_limit, sym, is_inr)}**")
     
     r2c1, r2c2, r2c3 = st.columns(3)
     emi = r2c1.number_input("Current Monthly EMIs", 0, income, 0)
+    r2c1.caption(f"**{fmt_curr(emi, sym, is_inr)}**")
     term_insurance = r2c2.number_input("Term Life Cover", 0, 1000000000, int(income*120))
+    r2c2.caption(f"**{fmt_curr(term_insurance, sym, is_inr)}**")
     health_insurance = r2c3.number_input("Health Insurance Cover", 0, 50000000, int(income*24))
+    r2c3.caption(f"**{fmt_curr(health_insurance, sym, is_inr)}**")
 
 with tab_asset:
     r1c1, r1c2, r1c3 = st.columns(3)
-    epf = r1c1.number_input("EPF/PPF Balance", 0, 100000000, 200000 if is_inr else 0)
-    r1c1.caption(fmt_curr(epf, sym, is_inr))
-    mutual_funds = r1c2.number_input("Mutual Funds", 0, 100000000, p_defaults["mf"])
-    r1c2.caption(fmt_curr(mutual_funds, sym, is_inr))
-    stocks = r1c3.number_input("Direct Stocks", 0, 100000000, int(p_defaults["mf"]*0.3))
+    epf = r1c1.number_input("EPF/PPF Balance", 0, 100000000, p_data["epf"])
+    r1c1.caption(f"**{fmt_curr(epf, sym, is_inr)}**")
+    mutual_funds = r1c2.number_input("Mutual Funds", 0, 100000000, p_data["mf"])
+    r1c2.caption(f"**{fmt_curr(mutual_funds, sym, is_inr)}**")
+    stocks = r1c3.number_input("Direct Stocks", 0, 100000000, int(p_data["mf"]*0.3))
+    r1c3.caption(f"**{fmt_curr(stocks, sym, is_inr)}**")
     
     r2c1, r2c2, r2c3 = st.columns(3)
     gold = r2c1.number_input("Gold/SGBs", 0, 100000000, 0)
+    r2c1.caption(f"**{fmt_curr(gold, sym, is_inr)}**")
     arbitrage = r2c2.number_input("Arbitrage Funds", 0, 100000000, 0)
-    fixed_income = r2c3.number_input("Bonds/Debt Assets", 0, 100000000, 0)
+    r2c2.caption(f"**{fmt_curr(arbitrage, sym, is_inr)}**")
+    fixed_income = r2c3.number_input("Fixed Income (Bonds/T-Bills)", 0, 100000000, 0)
+    r2c3.caption(f"**{fmt_curr(fixed_income, sym, is_inr)}**")
 
 with tab_strat:
     r1c1, r1c2, r1c3 = st.columns(3)
-    current_sip = r1c1.number_input("Monthly SIP", 0, income, p_defaults["sip"])
-    r1c1.caption(fmt_curr(current_sip, sym, is_inr))
+    current_sip = r1c1.number_input("Monthly SIP", 0, income, p_data["sip"])
+    r1c1.caption(f"**{fmt_curr(current_sip, sym, is_inr)}**")
     step_up = r1c2.slider("Annual SIP Step-Up %", 0, 20, 10) / 100
     inflation = r1c3.number_input("General Inflation %", 0.0, 15.0, 6.0 if is_inr else 3.0) / 100
     
     r2c1, r2c2, r2c3 = st.columns(3)
-    housing_goal = r2c1.selectbox("Housing Goal", ["Rent Forever", "Buy a Home", "Already Own"])
-    house_cost = 5000000 if is_inr else 350000
-    swr = r2c2.number_input("Safe Withdrawal Rate %", 1.0, 10.0, 4.0) / 100
-    use_post_tax = r2c3.toggle("Enable Tax-Adjusted Logic", True)
+    h_options = ["Rent Forever", "Buy a Home", "Already Own"]
+    h_index = h_options.index(p_data.get("housing", "Rent Forever"))
+    housing_goal = r2c1.selectbox("Housing Plan", options=h_options, index=h_index)
+    
+    house_cost_default = 5000000 if is_inr else 350000
+    house_cost = r2c2.number_input("Future House Budget", 0, 1000000000, house_cost_default)
+    r2c2.caption(f"**{fmt_curr(house_cost, sym, is_inr)}**")
+    
+    swr = r2c3.number_input("Safe Withdrawal Rate %", 1.0, 10.0, 4.0) / 100
+    
+    use_post_tax = st.toggle("Enable Tax-Adjusted Logic", True)
     
     st.markdown("**Expected Returns (%)**")
-    rr1, rr2, rr3, rr4, rr5, rr6, rr7 = st.columns(7)
-    rate_equity = rr1.number_input("SIP/Eq", value=12.0)/100
-    rate_fd = rr2.number_input("FD", value=7.0 if is_inr else 4.0)/100
-    rate_epf = rr3.number_input("EPF", value=8.1 if is_inr else 6.0)/100
-    rate_gold = rr4.number_input("Gold", value=8.0 if is_inr else 5.0)/100
-    rate_arbitrage = rr5.number_input("Arb.", value=7.5 if is_inr else 4.5)/100
-    rate_fixed = rr6.number_input("Debt", value=7.5 if is_inr else 4.5)/100
+    rr1, rr2, rr3, rr4 = st.columns(4)
+    rate_sip = rr1.number_input("SIP", value=12.0)/100
+    rate_equity = rr2.number_input("Direct Equity", value=12.0)/100
+    rate_fd = rr3.number_input("FD", value=7.0 if is_inr else 4.0)/100
+    rate_epf = rr4.number_input("EPF", value=8.1 if is_inr else 6.0)/100
+    
+    rr5, rr6, rr7, rr8 = st.columns(4)
+    rate_gold = rr5.number_input("Gold", value=8.0 if is_inr else 5.0)/100
+    rate_arbitrage = rr6.number_input("Arbitrage", value=7.5 if is_inr else 4.5)/100
+    rate_fixed = rr7.number_input("Debt/ Bonds", value=7.5 if is_inr else 4.5)/100
     
     rent_inflation = 0.08 if is_inr else 0.04
 
@@ -255,9 +298,15 @@ render_card(cl1, diagnostics['emergency'], "Liquidity")
 render_card(cl2, diagnostics['debt'], "Debt Health")
 render_card(cl3, diagnostics['life'], "Life Cover")
 
+col_l4, col_l5, col_l6 = st.columns(3)
+render_card(col_l4, diagnostics['health'], "Health Cover")
+render_card(col_l5, diagnostics['house'], "House Goal")
+render_card(col_l6, diagnostics['peace'], "Peace Fund")
+
 # ==========================================
 # 📈 WEALTH PROJECTION & CHART
 # ==========================================
+eff_sip = logic.calculate_post_tax_rate(rate_sip, "Equity", tax_slab, use_post_tax)
 eff_eq = logic.calculate_post_tax_rate(rate_equity, "Equity", tax_slab, use_post_tax)
 eff_fd = logic.calculate_post_tax_rate(rate_fd, "FD", tax_slab, use_post_tax)
 eff_epf = logic.calculate_post_tax_rate(rate_epf, "EPF", tax_slab, use_post_tax)
@@ -271,13 +320,13 @@ calc_in = {
     "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal, "cash": cash, "fd": fd, "epf": epf,
     "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income,
     "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, 
-    "rate_fd": eff_fd, "rate_new_sip": eff_eq, "rate_fixed": eff_bond
+    "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_bond
 }
 
 df = calculator.generate_forecast(calc_in)
 
 if not df.empty:
-    # 🔧 FORCE PURE TYPES
+    # 🔧 FORCE PURE TYPES FOR ALTAIR
     df['Age'] = df['Age'].astype(int)
     df['Projected Wealth'] = df['Projected Wealth'].astype(float)
     df['Required Corpus'] = df['Required Corpus'].astype(float)
@@ -288,7 +337,7 @@ if not df.empty:
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
-    extra_sip_req = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step_up)) if gap_val < 0 else 0.0
+    extra_sip_req = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_sip, step_up)) if gap_val < 0 else 0.0
 
     st.subheader("📊 Wealth Forecast")
     zoom = st.toggle("🔍 Default Zoom", value=True)
@@ -300,14 +349,20 @@ if not df.empty:
     else:
         plot_df = df.copy()
 
+    # 🇮🇳 RESTORED Y-AXIS FORMATTING LOGIC
+    if is_inr:
+        chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
+    else:
+        chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
+
     base = alt.Chart(plot_df).encode(x=alt.X('Age:Q', axis=alt.Axis(format='d')))
     sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
     
     c1 = base.mark_line(color='#00FF00', strokeWidth=3).encode(
-        y=alt.Y('Projected Wealth:Q', title=f"Amount ({sym})")
+        y=alt.Y('Projected Wealth:Q', axis=alt.Axis(labelExpr=chart_fmt, title=f"Amount ({sym})"))
     )
     c2 = base.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
-        y=alt.Y('Required Corpus:Q', title="")
+        y=alt.Y('Required Corpus:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
     )
     
     pt = base.mark_point().encode(
@@ -362,7 +417,7 @@ if st.session_state.get('has_interacted', False):
         "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf, "mutual_funds": mutual_funds, 
         "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income, "current_sip": current_sip, 
         "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost, "inflation": inflation, 
-        "swr": swr, "rate_new_sip": rate_equity, "rate_fd": rate_fd, "rate_epf": rate_epf, 
+        "swr": swr, "rate_new_sip": rate_sip, "rate_fd": rate_fd, "rate_epf": rate_epf, 
         "rate_equity": rate_equity, "rate_gold": rate_gold, "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, 
         "total_liquidity": total_liq, "net_worth": net_worth,
         
