@@ -114,7 +114,7 @@ with col_settings:
 
 with col_title:
     st.title(f"{flag} Financial Freedom Engine")
-    st.markdown("A tax-aware wealth simulator built for realistic planning.")
+    st.markdown(" Please update four sections below and see your road map to freedom unfold instantly! 🚀")
 
 # ==========================================
 # 👤 PERSONA SELECTOR
