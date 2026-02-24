@@ -398,18 +398,19 @@ st.subheader("📈 Wealth Projection")
 # ==========================================
 # 📈 WEALTH PROJECTION & CHART (BULLETPROOF)
 # ==========================================
-eff_eq = logic.calculate_post_tax_rate(rate_eq, "Equity", tax_slab, use_post_tax)
+# Fixed variable names to match your Tab 4 inputs!
+eff_eq = logic.calculate_post_tax_rate(rate_equity, "Equity", tax_slab, use_post_tax)
 eff_fd = logic.calculate_post_tax_rate(rate_fd, "FD", tax_slab, use_post_tax)
 eff_epf = logic.calculate_post_tax_rate(rate_epf, "EPF", tax_slab, use_post_tax)
 eff_gold = logic.calculate_post_tax_rate(rate_gold, "Gold", tax_slab, use_post_tax)
-eff_arb = logic.calculate_post_tax_rate(rate_arb, "Arbitrage", tax_slab, use_post_tax)
-eff_bond = logic.calculate_post_tax_rate(rate_bond, "Debt", tax_slab, use_post_tax)
+eff_arb = logic.calculate_post_tax_rate(rate_arbitrage, "Arbitrage", tax_slab, use_post_tax)
+eff_bond = logic.calculate_post_tax_rate(rate_fixed, "Debt", tax_slab, use_post_tax)
 
 calc_in = {
-    "age": age, "retire_age": safe_retire_age, "living_expense": living, "rent": rent, "current_sip": sip,
-    "monthly_pf": epf_calc, "step_up": step, "inflation": inf, "rent_inflation": 0.08 if is_inr else 0.04,
-    "swr": swr_rate, "house_cost": house_cost, "housing_goal": housing, "cash": cash, "fd": fd, "epf": epf_total,
-    "mutual_funds": mf_total, "stocks": stock_total, "gold": gold, "arbitrage": arb, "fixed_income": bonds,
+    "age": age, "retire_age": safe_retire_age, "living_expense": living_expense, "rent": rent, "current_sip": current_sip,
+    "monthly_pf": monthly_pf_inflow, "step_up": step_up, "inflation": inflation, "rent_inflation": 0.08 if is_inr else 0.04,
+    "swr": swr, "house_cost": house_cost, "housing_goal": housing_goal, "cash": cash, "fd": fd, "epf": epf,
+    "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, "fixed_income": fixed_income,
     "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, 
     "rate_fd": eff_fd, "rate_new_sip": eff_eq, "rate_fixed": eff_bond
 }
@@ -428,7 +429,9 @@ if not df.empty:
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
-    extra_sip = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step)) if gap_val < 0 else 0.0
+    
+    # Fixed `step` to `step_up` here as well
+    extra_sip = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step_up)) if gap_val < 0 else 0.0
 
     st.subheader("📊 Wealth Forecast")
     
@@ -476,7 +479,7 @@ if not df.empty:
             st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']])
 
     st.divider()
-    
+
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
 
