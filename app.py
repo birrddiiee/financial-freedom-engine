@@ -107,7 +107,7 @@ with c_settings:
     is_inr = (sym == "₹")
 with c_title:
     st.title("Financial Freedom Engine 🚀")
-    st.markdown("A tax-aware wealth simulator built for realistic planning.")
+    st.markdown("A tax-aware wealth simulator built for realistic planning. Please update Profile, Safety, Assets and Strategy sections to see your wealth projection instantly.")
 
 # ==========================================
 # 👤 PERSONA SELECTOR
