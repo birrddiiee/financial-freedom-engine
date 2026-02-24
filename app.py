@@ -349,32 +349,6 @@ st.divider()
 total_liq = cash + fd + credit_limit
 net_worth = cash + fd + epf + mutual_funds + stocks + gold + arbitrage + fixed_income
     
-# ==========================================
-# 💾 DATABASE AUTO-SAVE (GATEKEEPER)
-# ==========================================
-if st.session_state.get('has_interacted', False):
-    data_payload = {
-        "id": st.session_state['user_id'], 
-        "currency": curr_choice,           
-        "persona": selected_persona,       
-        "age": age, "retire_age": safe_retire_age, "dependents": dependents,
-        "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
-        "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
-        "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
-        "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, 
-        "fixed_income": fixed_income,
-        "current_sip": current_sip, "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost,
-        "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "rate_new_sip": rate_new_sip,
-        "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
-        "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, "total_liquidity": total_liq, "net_worth": net_worth
-    }
-    if supabase:
-        try:
-            supabase.table("user_data").upsert(data_payload).execute()
-        except Exception as e:
-            st.sidebar.error(f"Supabase Error: {e}") # This will print the exact missing column
-else:
-    st.session_state['has_interacted'] = True
 
 # RUN DIAGNOSTICS & SIMULATION
 user_data_logic = {
@@ -429,11 +403,23 @@ user_data_calc = {
     "fixed_income": fixed_income,
     "rate_savings": 0.03, "rate_epf": eff_epf, "rate_equity": eff_eq, "rate_gold": eff_gold, "rate_arbitrage": eff_arb, "rate_fd": eff_fd, "rate_new_sip": eff_sip, "rate_fixed": eff_fixed
 }
-
+# ==========================================
+# 📈 WEALTH PROJECTION & CHART
+# ==========================================
 df = calculator.generate_forecast(user_data_calc)
-freedom_row = df[df['Gap'] >= 0]
-practical_age = freedom_row.iloc[0]['Age'] if not freedom_row.empty else 100
 
+# --- PRE-CALCULATE METRICS EARLY FOR DB SAVE ---
+freedom_row = df[df['Gap'] >= 0]
+practical_age = int(freedom_row.iloc[0]['Age']) if not freedom_row.empty else 100
+
+target_row = df[df['Age'] == safe_retire_age].iloc[0]
+gap_val = float(target_row['Gap'])
+
+extra_sip_req = 0.0
+if gap_val < 0:
+    extra_sip_req = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_sip, step_up))
+
+# --- CHART RENDERING ---
 col_toggle, _ = st.columns([1, 3])
 with col_toggle:
     zoom = st.toggle("🔍 Default Zoom", value=True)
@@ -475,11 +461,10 @@ rules = base.mark_rule(color='gray').encode(
     opacity=alt.condition(nearest, alt.value(0.5), alt.value(0))
 ).transform_filter(nearest)
 
-st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules).interactive(), width="stretch")
+# iOS BUG FIX: .interactive() is removed here
+st.altair_chart(alt.layer(line_wealth, line_req, selectors, rules), use_container_width=True)
 
 st.divider()
-target_row = df[df['Age'] == safe_retire_age].iloc[0]
-gap_val = target_row['Gap']
 
 col_v1, col_v2 = st.columns(2)
 with col_v1:
@@ -489,7 +474,6 @@ with col_v1:
         st.success(f"✅ **POSSIBLE**\nSurplus at {safe_retire_age}: **{fmt_curr(gap_val, sym, is_inr)}**")
     else:
         st.error(f"❌ **SHORTFALL**\nGap at {safe_retire_age}: **{fmt_curr(abs(gap_val), sym, is_inr)}**")
-        extra_sip_req = calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_sip, step_up)
         st.info(f"💡 **The Fix:** Start an additional SIP of **{fmt_curr(extra_sip_req, sym, is_inr)}** / month.")
 
 with col_v2:
@@ -503,6 +487,39 @@ with col_v2:
     
     if arbitrage_advice['action'] == "SWITCH":
         st.info(f"💡 **Tax Tip:** {arbitrage_advice['msg']}")
+
+# ==========================================
+# 💾 DATABASE AUTO-SAVE (MOVED TO BOTTOM)
+# ==========================================
+if st.session_state.get('has_interacted', False):
+    data_payload = {
+        "id": st.session_state['user_id'], 
+        "currency": curr_choice,           
+        "persona": selected_persona,       
+        "age": age, "retire_age": safe_retire_age, "dependents": dependents,
+        "income": income, "basic_salary": basic_salary, "living_expense": living_expense, "rent": rent,
+        "tax_slab": tax_slab, "use_post_tax": use_post_tax, "cash": cash, "fd": fd, "credit_limit": credit_limit,
+        "emi": emi, "term_insurance": term_insurance, "health_insurance": health_insurance, "epf": epf,
+        "mutual_funds": mutual_funds, "stocks": stocks, "gold": gold, "arbitrage": arbitrage, 
+        "fixed_income": fixed_income,
+        "current_sip": current_sip, "step_up": step_up, "housing_goal": housing_goal, "house_cost": house_cost,
+        "inflation": inflation, "rent_inflation": rent_inflation, "swr": swr, "rate_new_sip": rate_new_sip,
+        "rate_fd": rate_fd, "rate_epf": rate_epf, "rate_equity": rate_equity, "rate_gold": rate_gold,
+        "rate_arbitrage": rate_arbitrage, "rate_fixed": rate_fixed, "total_liquidity": total_liq, "net_worth": net_worth,
+        
+        # 🆕 THE NEW COMPUTED VALUES
+        "practical_age": practical_age,
+        "gap_val": gap_val,
+        "extra_sip_req": extra_sip_req
+    }
+    
+    if supabase:
+        try:
+            supabase.table("user_data").upsert(data_payload).execute()
+        except Exception as e:
+            st.sidebar.error(f"Supabase Error: {e}") # Unmasks missing columns
+else:
+    st.session_state['has_interacted'] = True
 
 # ==========================================
 # 🗣️ USER FEEDBACK SUBMISSION
