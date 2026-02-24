@@ -334,9 +334,8 @@ if not df.empty:
     if 'Annual Expense' in df.columns:
         df['Annual Expense'] = df['Annual Expense'].astype(float)
 
-    freedom = df[df['Gap'] >= 0]
-    # Defaulting fallback to 120 instead of 100
-    practical_age = int(freedom.iloc[0]['Age']) if not freedom.empty else 120
+    # Calculate True FI age from backend
+    practical_age = int(calculator.calculate_true_fi_age(calc_in))
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
@@ -354,13 +353,30 @@ if not df.empty:
 
     zoom = st.toggle("🔍 Default Zoom", value=True)
 
-    # 🚀 CHANGED LIMIT TO 120
     if zoom and practical_age < 120:
         end_v = int(min(max(practical_age, safe_retire_age) + 10, 120))
         plot_df = df[df['Age'] <= end_v].copy()
     else:
         plot_df = df.copy()
 
+    # 🚀 THE FIX: INDIAN TOOLTIP FORMATTING
+    def tooltip_fmt(val, is_inr):
+        if is_inr:
+            if val >= 10000000: return f"₹ {val/10000000:.2f} Cr"
+            elif val >= 100000: return f"₹ {val/100000:.2f} L"
+            else: return f"₹ {val:,.0f}"
+        else:
+            if val >= 1000000: return f"{sym} {val/1000000:.2f} M"
+            elif val >= 1000: return f"{sym} {val/1000:.0f} k"
+            else: return f"{sym} {val:,.0f}"
+
+    # Generate custom strings for the hover banner
+    plot_df['Wealth_Fmt'] = plot_df['Projected Wealth'].apply(lambda x: tooltip_fmt(x, is_inr))
+    plot_df['Target_Fmt'] = plot_df['Required Corpus'].apply(lambda x: tooltip_fmt(x, is_inr))
+    plot_df['Expense_Fmt'] = plot_df['Annual Expense'].apply(lambda x: tooltip_fmt(x, is_inr))
+    plot_df['Gap_Fmt'] = plot_df['Gap'].apply(lambda x: tooltip_fmt(x, is_inr))
+
+    # Formatting for the Y-Axis
     if is_inr:
         chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
     else:
@@ -376,7 +392,6 @@ if not df.empty:
         y=alt.Y('Required Corpus:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
     )
     
-    # Safely draw the Orange line now that the data is guaranteed to be there
     if 'Annual Expense' in plot_df.columns:
         c3 = base.mark_line(color='#FFA500', strokeWidth=2).encode(
             y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
@@ -385,14 +400,15 @@ if not df.empty:
     else:
         layers = [c1, c2]
     
+    # Tooltip now points to the new _Fmt columns
     pt = base.mark_point().encode(
         opacity=alt.value(0), 
         tooltip=[
             alt.Tooltip('Age:Q', title='Age'), 
-            alt.Tooltip('Projected Wealth:Q', format=',.0f', title=f'Wealth ({sym})'), 
-            alt.Tooltip('Required Corpus:Q', format=',.0f', title=f'Target ({sym})'), 
-            alt.Tooltip('Annual Expense:Q', format=',.0f', title=f'Expenses ({sym})'),
-            alt.Tooltip('Gap:Q', format=',.0f', title=f'Surplus/Gap ({sym})')
+            alt.Tooltip('Wealth_Fmt:N', title='Wealth'), 
+            alt.Tooltip('Target_Fmt:N', title='Target'), 
+            alt.Tooltip('Expense_Fmt:N', title='Expenses'),
+            alt.Tooltip('Gap_Fmt:N', title='Surplus/Gap')
         ]
     ).add_params(sel)
     
