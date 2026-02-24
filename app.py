@@ -242,7 +242,7 @@ with tab_strat:
     housing_goal = r2c1.selectbox("Housing Plan", options=h_options, index=h_index)
     
     house_cost_default = 5000000 if is_inr else 350000
-    house_cost = r2c2.number_input("Future House Budget", min_value=0, max_value=None, value=int(house_cost_default))
+    house_cost = r2c2.number_input("Dream House Cost (Today's Value)", min_value=0, max_value=None, value=int(house_cost_default))
     r2c2.caption(f"**{fmt_curr(house_cost, sym, is_inr)}**")
     
     swr = r2c3.number_input("Safe Withdrawal Rate %", min_value=0.1, max_value=None, value=4.0) / 100
