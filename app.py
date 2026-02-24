@@ -435,6 +435,12 @@ if not df.empty:
 
     st.subheader("📊 Wealth Forecast")
     
+   target_row = df[df['Age'] == safe_retire_age].iloc[0]
+    gap_val = float(target_row['Gap'])
+    extra_sip = float(calculator.solve_extra_sip_needed(abs(gap_val), safe_retire_age - age, eff_eq, step)) if gap_val < 0 else 0.0
+
+    st.subheader("📊 Wealth Forecast")
+    
     # 🆕 ADDED A SAFE MODE TOGGLE
     c_tog1, c_tog2, _ = st.columns([1, 1, 2])
     zoom = c_tog1.toggle("🔍 Default Zoom", value=True)
@@ -444,26 +450,29 @@ if not df.empty:
         # 🟢 BULLETPROOF FALLBACK: Native Streamlit Chart (Cannot crash)
         st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']], height=400)
     else:
-        # 🔵 ALTAIR CHART (With Safety Nets)
+        # 🔵 ALTAIR CHART (With Strict Type Sanitization)
         if zoom and practical_age < 100:
-            end_v = int(min(max(practical_age, safe_retire_age) + 10, 100))
-            view_x = [int(age), max(int(age) + 1, end_v)] # Prevents [30, 30] crash
+            end_v = min(max(practical_age, safe_retire_age) + 10, 100)
             temp_df = df[df['Age'] <= end_v]
-            max_y = float(max(temp_df['Projected Wealth'].max(), temp_df['Required Corpus'].max()) * 1.1)
-        else:
-            view_x = [int(age), 100]
-            max_y = float(max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1)
-
-        # Prevents [0.0, 0.0] crash
-        if pd.isna(max_y) or max_y <= 0:
-            max_y = 100000.0 
+            raw_max_y = max(temp_df['Projected Wealth'].max(), temp_df['Required Corpus'].max()) * 1.1
             
-        view_y = [0.0, max_y]
+            # THE FIX: Force pure Python floats so the JSON serializer doesn't crash
+            view_x = [float(age), float(end_v)]
+            view_y = [0.0, float(raw_max_y)]
+        else:
+            raw_max_y = max(df['Projected Wealth'].max(), df['Required Corpus'].max()) * 1.1
+            
+            # THE FIX: Force pure Python floats
+            view_x = [float(age), 100.0]
+            view_y = [0.0, float(raw_max_y)]
+
+        # Prevents [0.0, 0.0] crash if inputs are zero
+        if pd.isna(view_y[1]) or view_y[1] <= 0:
+            view_y[1] = 100000.0 
 
         base = alt.Chart(df).encode(x=alt.X('Age:Q', scale=alt.Scale(domain=view_x), axis=alt.Axis(format='d')))
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
         
-        # Note: labelExpr removed temporarily to ensure stability
         c1 = base.mark_line(color='#00FF00', strokeWidth=3).encode(
             y=alt.Y('Projected Wealth:Q', scale=alt.Scale(domain=view_y), title=f"Amount ({sym})")
         )
@@ -472,13 +481,15 @@ if not df.empty:
         rl = base.mark_rule(color='gray').encode(opacity=alt.condition(sel, alt.value(0.5), alt.value(0))).transform_filter(sel)
         
         try:
-            # The explicit width='stretch' fix
             st.altair_chart(alt.layer(c1, c2, pt, rl), width="stretch")
         except Exception as e:
             st.error(f"Chart Render Error: {e}")
             st.line_chart(df.set_index('Age')[['Projected Wealth', 'Required Corpus']])
 
     st.divider()
+    
+    col_v1, col_v2 = st.columns(2)
+    # ... (rest of the code continues here)
 
     target_row = df[df['Age'] == safe_retire_age].iloc[0]
     gap_val = float(target_row['Gap'])
