@@ -356,12 +356,20 @@ elif 1 <= st.session_state.step <= 4:
                 st.rerun()
                 
     with b_col3:
-        if st.session_state.step < 4:
-            if st.button("Next ➡️", type="primary", width="stretch"):
-                st.session_state.step += 1
+        if st.session_state.step == 1:
+            if st.button("Next: Safety & Debts ⬆️", type="primary", width="stretch"):
+                st.session_state.step = 2
+                st.rerun()
+        elif st.session_state.step == 2:
+            if st.button("Next: Invested Assets ⬆️", type="primary", width="stretch"):
+                st.session_state.step = 3
+                st.rerun()
+        elif st.session_state.step == 3:
+            if st.button("Next: Strategy & Growth ⬆️", type="primary", width="stretch"):
+                st.session_state.step = 4
                 st.rerun()
         elif st.session_state.step == 4:
-            if st.button("🚀 Calculate My Freedom", type="primary", width="stretch"):
+            if st.button("🚀 View Financial Reality ⬆️", type="primary", width="stretch"):
                 st.session_state.step = 5
                 st.rerun()
 
