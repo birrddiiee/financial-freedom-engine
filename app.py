@@ -204,7 +204,7 @@ st.divider()
 # -----------------------------------
 if st.session_state.step == 0:
     st.markdown("### Step 0: Setup & Quick Start")
-    st.markdown("Choose a starting point. We will pre-fill the calculator with realistic numbers to save you time. **(Don't worry, you can easily edit it!)**")
+    st.markdown("Choose a starting point. If you wish please pre-fill the calculator with realistic numbers to save your time. **(Don't worry, you can easily edit it!)**")
     
     col_c1, col_c2 = st.columns([1, 2])
     with col_c1:
@@ -213,11 +213,11 @@ if st.session_state.step == 0:
     st.markdown("<br>", unsafe_allow_html=True)
     
     if "₹" in curr:
-        if st.button("💻 Load 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
+        if st.button("💻 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
             load_persona_to_state("techie", curr)
-        if st.button("🏔️ Load 'The Family' (Stability & Safe Assets Focus)", width="stretch"):
+        if st.button("🏔️ 'The Family' (Stability & Safe Assets Focus)", width="stretch"):
             load_persona_to_state("family", curr)
-        if st.button("🔥 Load 'The FIRE Chaser' (Extreme Saving, Retiring at 45)", width="stretch"):
+        if st.button("🔥 'The FIRE Chaser' (Extreme Saving, Retiring at 45)", width="stretch"):
             load_persona_to_state("fire", curr)
             
     if st.button("🛠️ Start from a Blank Template", type="primary", width="stretch"):
@@ -237,14 +237,14 @@ elif 1 <= st.session_state.step <= 4:
         
         c1, c2, c3 = st.columns(3)
         c1.number_input("Current Age", min_value=18, max_value=99, value=int(st.session_state.db.get("age", 30)), key="age", on_change=sync, args=("age",))
-        c2.number_input("Desired Retire Age", min_value=18, max_value=99, value=int(st.session_state.db.get("retire_age", 60)), key="retire_age", on_change=sync, args=("retire_age",))
+        c2.number_input("Desired Retirement Age", min_value=18, max_value=99, value=int(st.session_state.db.get("retire_age", 60)), key="retire_age", on_change=sync, args=("retire_age",))
         c3.number_input("Dependents", min_value=0, max_value=10, value=int(st.session_state.db.get("dependents", 2)), key="dependents", on_change=sync, args=("dependents",))
         
         c4, c5, c6 = st.columns(3)
-        c4.number_input(f"Monthly In-hand ({sym})", min_value=0, value=int(st.session_state.db.get("income", 0)), key="income", on_change=sync, args=("income",))
+        c4.number_input(f"Monthly In-hand Salary ({sym})", min_value=0, value=int(st.session_state.db.get("income", 0)), key="income", on_change=sync, args=("income",))
         c4.caption(f"**{fmt_curr(st.session_state.db.get('income', 0), sym, is_inr)}**")
         
-        c5.number_input("Monthly Pension/EPF Contribution", min_value=0, value=int(st.session_state.db.get("monthly_pf", 0)), key="monthly_pf", on_change=sync, args=("monthly_pf",))
+        c5.number_input("Monthly EPFO/ Pension Contribution", min_value=0, value=int(st.session_state.db.get("monthly_pf", 0)), key="monthly_pf", on_change=sync, args=("monthly_pf",))
         c5.caption(f"**{fmt_curr(st.session_state.db.get('monthly_pf', 0), sym, is_inr)}**")
 
         c7, c8, c9 = st.columns(3)
@@ -263,17 +263,17 @@ elif 1 <= st.session_state.step <= 4:
         st.subheader("2️⃣ Safety & Debts")
         
         c1, c2, c3 = st.columns(3)
-        c1.number_input("Cash & Savings", min_value=0, value=int(st.session_state.db.get("cash", 0)), key="cash", on_change=sync, args=("cash",))
+        c1.number_input("Cash & Savings in bank", min_value=0, value=int(st.session_state.db.get("cash", 0)), key="cash", on_change=sync, args=("cash",))
         c1.caption(f"**{fmt_curr(st.session_state.db.get('cash', 0), sym, is_inr)}**")
         
         c2.number_input("Fixed Deposits (FDs / CDs)", min_value=0, value=int(st.session_state.db.get("fd", 0)), key="fd", on_change=sync, args=("fd",))
         c2.caption(f"**{fmt_curr(st.session_state.db.get('fd', 0), sym, is_inr)}**")
         
-        c3.number_input("Credit Card Limit", min_value=0, value=int(st.session_state.db.get("credit_limit", 0)), key="credit_limit", on_change=sync, args=("credit_limit",))
+        c3.number_input("Total Credit Card Limit", min_value=0, value=int(st.session_state.db.get("credit_limit", 0)), key="credit_limit", on_change=sync, args=("credit_limit",))
         c3.caption(f"**{fmt_curr(st.session_state.db.get('credit_limit', 0), sym, is_inr)}**")
         
         c4, c5, c6 = st.columns(3)
-        c4.number_input("Monthly Debt Payments (EMI / Loans)", min_value=0, value=int(st.session_state.db.get("emi", 0)), key="emi", on_change=sync, args=("emi",))
+        c4.number_input("Total Monthly EMI(Debt) Payments", min_value=0, value=int(st.session_state.db.get("emi", 0)), key="emi", on_change=sync, args=("emi",))
         c4.caption(f"**{fmt_curr(st.session_state.db.get('emi', 0), sym, is_inr)}**")
         
         c5.number_input("Life/Term Insurance Cover", min_value=0, value=int(st.session_state.db.get("term_insurance", 0)), key="term_insurance", on_change=sync, args=("term_insurance",))
@@ -284,23 +284,23 @@ elif 1 <= st.session_state.step <= 4:
 
     # --- STEP 3: ASSETS ---
     elif st.session_state.step == 3:
-        st.subheader("3️⃣ Invested Assets")
+        st.subheader("3️⃣ Invested Assets Corpus")
         
         c1, c2, c3 = st.columns(3)
-        c1.number_input("Retirement Corpus (EPF / 401k / Pension)", min_value=0, value=int(st.session_state.db.get("epf", 0)), key="epf", on_change=sync, args=("epf",))
+        c1.number_input("Total Corpus in EPFO / 401k / Pensions", min_value=0, value=int(st.session_state.db.get("epf", 0)), key="epf", on_change=sync, args=("epf",))
         c1.caption(f"**{fmt_curr(st.session_state.db.get('epf', 0), sym, is_inr)}**")
         
-        c2.number_input("Mutual Funds", min_value=0, value=int(st.session_state.db.get("mutual_funds", 0)), key="mutual_funds", on_change=sync, args=("mutual_funds",))
+        c2.number_input("Current Mutual Funds Value", min_value=0, value=int(st.session_state.db.get("mutual_funds", 0)), key="mutual_funds", on_change=sync, args=("mutual_funds",))
         c2.caption(f"**{fmt_curr(st.session_state.db.get('mutual_funds', 0), sym, is_inr)}**")
         
-        c3.number_input("Direct Stocks", min_value=0, value=int(st.session_state.db.get("stocks", 0)), key="stocks", on_change=sync, args=("stocks",))
+        c3.number_input("Money in Stocks", min_value=0, value=int(st.session_state.db.get("stocks", 0)), key="stocks", on_change=sync, args=("stocks",))
         c3.caption(f"**{fmt_curr(st.session_state.db.get('stocks', 0), sym, is_inr)}**")
         
         c4, c5, c6 = st.columns(3)
-        c4.number_input("Gold (Physical or SGBs)", min_value=0, value=int(st.session_state.db.get("gold", 0)), key="gold", on_change=sync, args=("gold",))
+        c4.number_input("Gold (Physical/SGBs/ETF)", min_value=0, value=int(st.session_state.db.get("gold", 0)), key="gold", on_change=sync, args=("gold",))
         c4.caption(f"**{fmt_curr(st.session_state.db.get('gold', 0), sym, is_inr)}**")
         
-        c5.number_input("Arbitrage Funds", min_value=0, value=int(st.session_state.db.get("arbitrage", 0)), key="arbitrage", on_change=sync, args=("arbitrage",))
+        c5.number_input("Arbitrage Fund Value", min_value=0, value=int(st.session_state.db.get("arbitrage", 0)), key="arbitrage", on_change=sync, args=("arbitrage",))
         c5.caption(f"**{fmt_curr(st.session_state.db.get('arbitrage', 0), sym, is_inr)}**")
         
         c6.number_input("Fixed Income (Bonds)", min_value=0, value=int(st.session_state.db.get("fixed_income", 0)), key="fixed_income", on_change=sync, args=("fixed_income",))
@@ -308,14 +308,14 @@ elif 1 <= st.session_state.step <= 4:
 
     # --- STEP 4: STRATEGY ---
     elif st.session_state.step == 4:
-        st.subheader("4️⃣ Strategy & Growth")
+        st.subheader("4️⃣ Strategy & Returns")
         
         st.markdown("**Your Ongoing Investments**")
         c1, c2 = st.columns(2)
-        c1.number_input("Monthly SIP / Investment Amount", min_value=0, value=int(st.session_state.db.get("current_sip", 0)), key="current_sip", on_change=sync, args=("current_sip",))
+        c1.number_input("Monthly SIP ", min_value=0, value=int(st.session_state.db.get("current_sip", 0)), key="current_sip", on_change=sync, args=("current_sip",))
         c1.caption(f"**{fmt_curr(st.session_state.db.get('current_sip', 0), sym, is_inr)}**")
         
-        c2.slider("Annual Investment Increase (Step-Up %)", min_value=0, max_value=50, value=int(st.session_state.db.get("step_up", 10)), key="step_up", on_change=sync, args=("step_up",))
+        c2.slider("Annual SIP Increase (Step-Up %)", min_value=0, max_value=50, value=int(st.session_state.db.get("step_up", 10)), key="step_up", on_change=sync, args=("step_up",))
         
         st.markdown("**Macro Economics & Housing**")
         c3, c4 = st.columns(2)
@@ -325,21 +325,21 @@ elif 1 <= st.session_state.step <= 4:
         c5, c6 = st.columns(2)
         c5.selectbox("Housing Plan", options=range(len(h_options)), format_func=lambda x: h_options[x], index=int(st.session_state.db.get("housing_idx", 0)), key="housing_idx", on_change=sync, args=("housing_idx",))
         
-        c6.number_input("House Cost (Today's Value)", min_value=0, value=int(st.session_state.db.get("house_cost", 0)), key="house_cost", on_change=sync, args=("house_cost",))
+        c6.number_input("House Cost in Today's Value", min_value=0, value=int(st.session_state.db.get("house_cost", 0)), key="house_cost", on_change=sync, args=("house_cost",))
         c6.caption(f"**{fmt_curr(st.session_state.db.get('house_cost', 0), sym, is_inr)}**")
         
-        with st.expander("⚙️ Advanced: Expected Return Rates (%)", expanded=False):
+        with st.expander("⚙️ Advanced: Expected Annual Return Rates (%)", expanded=False):
             rc1, rc2, rc3 = st.columns(3)
-            rc1.number_input("Equity SIP Return", value=float(st.session_state.db.get("rate_sip", 12.0)), key="rate_sip", on_change=sync, args=("rate_sip",))
-            rc2.number_input("Direct Equity Return", value=float(st.session_state.db.get("rate_equity", 12.0)), key="rate_equity", on_change=sync, args=("rate_equity",))
+            rc1.number_input("Mutual Fund Return", value=float(st.session_state.db.get("rate_sip", 12.0)), key="rate_sip", on_change=sync, args=("rate_sip",))
+            rc2.number_input("Stocks Return", value=float(st.session_state.db.get("rate_equity", 12.0)), key="rate_equity", on_change=sync, args=("rate_equity",))
             rc3.number_input("FD / CD Return (Gross)", value=float(st.session_state.db.get("rate_fd_gross", 7.0)), key="rate_fd_gross", on_change=sync, args=("rate_fd_gross",))
             
             rc4, rc5, rc6 = st.columns(3)
             rc4.number_input("Gold Return", value=float(st.session_state.db.get("rate_gold", 8.0)), key="rate_gold", on_change=sync, args=("rate_gold",))
-            rc5.number_input("Arbitrage Return", value=float(st.session_state.db.get("rate_arbitrage", 7.5)), key="rate_arbitrage", on_change=sync, args=("rate_arbitrage",))
+            rc5.number_input("Arbitrage Fund Return", value=float(st.session_state.db.get("rate_arbitrage", 7.5)), key="rate_arbitrage", on_change=sync, args=("rate_arbitrage",))
             rc6.number_input("Debt/Bonds Return", value=float(st.session_state.db.get("rate_fixed", 7.5)), key="rate_fixed", on_change=sync, args=("rate_fixed",))
             
-            st.number_input("Pension/EPF Return", value=float(st.session_state.db.get("rate_epf", 8.1)), key="rate_epf", on_change=sync, args=("rate_epf",))
+            st.number_input("EPFO/Pension Return", value=float(st.session_state.db.get("rate_epf", 8.1)), key="rate_epf", on_change=sync, args=("rate_epf",))
 
     # --- WIZARD NAVIGATION BUTTONS ---
     st.markdown("<br><br>", unsafe_allow_html=True)
