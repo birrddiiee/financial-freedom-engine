@@ -462,14 +462,14 @@ elif st.session_state.step == 5:
             st.markdown(f"<li>🟢 <b>Goal (Retire at {safe_retire_age}):</b> ACHIEVABLE! Simulator confirmed your wealth will safely last to age 100 regardless.</li>", unsafe_allow_html=True)
     else:
         st.markdown(f"<li>🔴 <b>Goal (Retire at {safe_retire_age}):</b> Shortfall Detected. You have a projected gap of {fmt_curr(abs(gap_val), sym, is_inr)}.</li>", unsafe_allow_html=True)
-        st.markdown(f"<li>💡 <b>The Fix:</b> Add exactly <b>{fmt_curr(extra_sip_req, sym, is_inr)} / month</b> to your current investments to retire on time.</li>", unsafe_allow_html=True)
+        st.markdown(f"<li>💡 <b>The Fix:</b> Add <b>{fmt_curr(extra_sip_req, sym, is_inr)} / month</b> to your current investments to retire on time.</li>", unsafe_allow_html=True)
 
     if practical_age <= age: 
         st.markdown(f"<li>🎉 <b>Practical Reality:</b> You are already Financially Independent (FI) right now!</li>", unsafe_allow_html=True)
     elif practical_age >= 100: 
         st.markdown(f"<li>🔴 <b>Practical Reality:</b> Financial Freedom is not possible even by age 100 with your current settings.</li>", unsafe_allow_html=True)
     else: 
-        st.markdown(f"<li>📅 <b>Practical Reality:</b> If you change nothing, your true Financial Freedom Age is <b>{practical_age}</b> (when wealth naturally survives to 100).</li>", unsafe_allow_html=True)
+        st.markdown(f"<li>📅 <b>Practical Reality:</b> If you cannot change anything, your true Financial Freedom Age is <b>{practical_age}</b> (when wealth naturally survives to 100).</li>", unsafe_allow_html=True)
 
     st.markdown("</ul>", unsafe_allow_html=True)
     st.divider()
@@ -545,9 +545,9 @@ elif st.session_state.step == 5:
             with trap_banner_placeholder.container():
                 st.error("#### 🚨 The Great Retirement Myth")
                 st.markdown(f"""
-                Let's look at the actual math of moving to a 100% Risk-Free portfolio at retirement. To safely survive until age 100 using only low-risk accounts, you need a staggering **{fmt_curr(target_corpus, sym, is_inr)}**. Why is this number so terrifyingly high? 
+                Let's look at the actual math of moving to a 100% Risk-Free portfolio at retirement. To safely survive until age 100 using only low-risk investments, you need a staggering **{fmt_curr(target_corpus, sym, is_inr)}**. Why is this number so terrifyingly high? 
                 
-                In Year 1 of retirement, your massive safe balance will generate **{fmt_curr(fd_gross_int, sym, is_inr)}** in interest. Because this is taxed on accrual, you will owe **{fmt_curr(tax_amt, sym, is_inr)}** in taxes, leaving a net of **{fmt_curr(net_int, sym, is_inr)}**.
+                In Year 1 of retirement, your massive safe balance will generate **{fmt_curr(fd_gross_int, sym, is_inr)}** in interest. Because interests on FD is taxed on accrual, you will owe **{fmt_curr(tax_amt, sym, is_inr)}** in taxes, leaving a net of **{fmt_curr(net_int, sym, is_inr)}**.
                 
                 This means your true, in-hand return is only **{net_pct:.2f}%**. 
                 
