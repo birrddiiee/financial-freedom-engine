@@ -12,7 +12,7 @@ import calculator
 st.set_page_config(page_title="Financial Freedom Engine", page_icon="🚀", layout="wide", initial_sidebar_state="collapsed")
 
 # ==========================================
-# 📊 GOOGLE ANALYTICS (Bulletproof Injection)
+# 📊 GOOGLE ANALYTICS
 # ==========================================
 try:
     ga_id = st.secrets.get("GA_ID", None)
@@ -83,6 +83,7 @@ supabase = init_connection()
 
 if 'user_id' not in st.session_state: st.session_state['user_id'] = str(uuid.uuid4())
 if 'step' not in st.session_state: st.session_state['step'] = 0
+if 'last_step' not in st.session_state: st.session_state['last_step'] = 0
 
 # 🛡️ THE BULLETPROOF DATA VAULT
 if 'db' not in st.session_state: st.session_state.db = {}
@@ -90,8 +91,16 @@ if 'db' not in st.session_state: st.session_state.db = {}
 def sync(key):
     st.session_state.db[key] = st.session_state[key]
 
+# ⬆️ THE "NO-JS" AUTOFOCUS SCROLL HACK
+# If the step changes, we render a hidden input field with 'autofocus'.
+# The mobile browser will instantly snap to the top of the screen to look at it.
+if st.session_state.step != st.session_state.last_step:
+    st.markdown('<input autofocus style="opacity: 0; width: 0; height: 0; position: absolute; top: 0; pointer-events: none;" />', unsafe_allow_html=True)
+    st.session_state.last_step = st.session_state.step
+
 def trigger_scroll_and_rerun():
-    st.session_state['scroll_to_top'] = True
+    # We purposefully misalign the last_step so the autofocus hack fires on reload
+    st.session_state['last_step'] = -1 
     st.rerun()
 
 # ==========================================
@@ -632,16 +641,21 @@ elif st.session_state.step == 5:
         else:
             chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
 
-        # 📱 BRUTE-FORCE MOBILE GRAPH FIX
+        # 📱 THE HARD-CODED X-AXIS FIX
+        # We physically force Altair to only print labels every 10 years, starting from the nearest decade
+        start_tick = (int(min(plot_df['Age'])) // 10) * 10
+        end_tick = int(max(plot_df['Age']))
+        x_ticks = list(range(start_tick, end_tick + 1, 10))
+
         base_chart = alt.Chart(plot_df).encode(
             x=alt.X('Age:Q', axis=alt.Axis(
                 format='d', 
-                tickCount=6,         # strictly forces a maximum of 6 numbers on the X axis
-                labelAngle=-45,      # Rotates the text 45 degrees so it physically cannot overlap
-                grid=False           
+                values=x_ticks,        # ONLY prints 30, 40, 50, 60... Impossible to get congested now!
+                labelAngle=0,          # Keeps text straight and easy to read
+                grid=False             # Deletes vertical prison bars
             ))
         ).properties(
-            height=500               # Gives the lines a huge amount of vertical space
+            height=450                 # Prevents the Y-axis lines from squishing together
         )
         
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
@@ -675,7 +689,7 @@ elif st.session_state.step == 5:
             opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
         ).transform_filter(sel)
         
-        st.altair_chart(alt.layer(*layers, pt, rl), width="stretch")
+        st.altair_chart(alt.layer(*layers, pt, rl), use_container_width=True)
 
     # --- 7. AUDIT THE MATH ---
     with st.expander("🔍 Audit the Math: Year-by-Year Raw Data", expanded=False):
@@ -703,78 +717,39 @@ elif st.session_state.step == 5:
     if st.button("Submit Feedback", type="primary", width="stretch"):
         st.success("Thank you! Your feedback has been securely submitted.")
 
-# ==========================================
-# ⬆️ THE NUCLEAR SCROLL-TO-TOP TRIGGER
-# (Placed at the bottom so it fires after the UI renders)
-# ==========================================
-if st.session_state.get('scroll_to_top', False):
-    components.html(
-        """
-        <script>
-            function forceScroll() {
-                try {
-                    // Tell the window to scroll to top instantly
-                    window.parent.scrollTo({top: 0, left: 0, behavior: 'auto'});
-                    
-                    // Attack the specific internal Streamlit divs
-                    var doc = window.parent.document;
-                    var view = doc.querySelector('[data-testid="stAppViewContainer"]');
-                    var main = doc.querySelector('.main');
-                    
-                    if (view) { view.style.scrollBehavior = 'auto'; view.scrollTop = 0; }
-                    if (main) { main.style.scrollBehavior = 'auto'; main.scrollTop = 0; }
-                    
-                    doc.body.scrollTop = 0;
-                    doc.documentElement.scrollTop = 0;
-                } catch (e) {}
-            }
-            
-            // Fire instantly, then hammer it again 3 times to beat React's internal state load
-            forceScroll();
-            setTimeout(forceScroll, 100);
-            setTimeout(forceScroll, 250);
-            setTimeout(forceScroll, 500);
-        </script>
-        """,
-        height=0
-    )
-    st.session_state['scroll_to_top'] = False
-
-# ==========================================
-# 💾 DB AUTO-SAVE 
-# ==========================================
-if supabase:
-    try:
-        # Only save if user has proceeded past step 0
-        if st.session_state.step > 0:
+    # ==========================================
+    # 💾 DB AUTO-SAVE 
+    # ==========================================
+    if supabase:
+        try:
             payload = {
                 "id": st.session_state['user_id'], 
                 "currency": st.session_state['curr_choice'], 
-                "age": st.session_state.db.get("age", 30), 
-                "retire_age": max(st.session_state.db.get("age", 30), st.session_state.db.get("retire_age", 60)), 
+                "age": age, 
+                "retire_age": safe_retire_age, 
                 "dependents": st.session_state.db.get("dependents", 0), 
                 "income": st.session_state.db.get("income", 0), 
                 "basic_salary": int(st.session_state.db.get("monthly_pf", 0)), 
-                "living_expense": st.session_state.db.get("living_expense", 0), 
-                "rent": st.session_state.db.get("rent", 0), 
+                "living_expense": living_expense, 
+                "rent": rent, 
                 "tax_slab": float(st.session_state.db.get("tax_slab_idx", 6)), 
-                "use_post_tax": st.session_state.db.get("use_post_tax", True), 
-                "cash": st.session_state.db.get("cash", 0), 
-                "fd": st.session_state.db.get("fd", 0), 
+                "use_post_tax": use_post_tax, 
+                "cash": cash, 
+                "fd": fd, 
                 "credit_limit": st.session_state.db.get("credit_limit", 0), 
                 "emi": st.session_state.db.get("emi", 0), 
                 "term_insurance": st.session_state.db.get("term_insurance", 0), 
                 "health_insurance": st.session_state.db.get("health_insurance", 0), 
-                "epf": st.session_state.db.get("epf", 0), 
-                "mutual_funds": st.session_state.db.get("mutual_funds", 0), 
-                "stocks": st.session_state.db.get("stocks", 0), 
-                "gold": st.session_state.db.get("gold", 0), 
-                "arbitrage": st.session_state.db.get("arbitrage", 0), 
-                "fixed_income": float(st.session_state.db.get("fixed_income", 0)), 
-                "current_sip": st.session_state.db.get("current_sip", 0), 
+                "epf": epf, 
+                "mutual_funds": mutual_funds, 
+                "stocks": stocks, 
+                "gold": gold, 
+                "arbitrage": arbitrage, 
+                "fixed_income": float(fixed_income), 
+                "current_sip": current_sip, 
                 "step_up": float(st.session_state.db.get("step_up", 10)), 
-                "housing_goal": h_options[st.session_state.db.get("housing_idx", 0)], 
-                "house_cost": st.session_state.db.get("house_cost", 0), 
+                "housing_goal": housing_goal, 
+                "house_cost": house_cost, 
                 "inflation": float(st.session_state.db.get("inflation", 6.0)), 
                 "rent_inflation": float(st.session_state.db.get("rent_inflation", 8.0)), 
                 "swr": 0.0,
@@ -785,14 +760,14 @@ if supabase:
                 "rate_gold": float(st.session_state.db.get("rate_gold", 8.0)), 
                 "rate_arbitrage": float(st.session_state.db.get("rate_arbitrage", 7.5)), 
                 "rate_fixed": float(st.session_state.db.get("rate_fixed", 7.5)), 
-                "total_liquidity": (st.session_state.db.get("cash", 0) + st.session_state.db.get("fd", 0) + st.session_state.db.get("credit_limit", 0)), 
-                "net_worth": (st.session_state.db.get("cash", 0) + st.session_state.db.get("fd", 0) + st.session_state.db.get("epf", 0) + st.session_state.db.get("mutual_funds", 0) + st.session_state.db.get("stocks", 0) + st.session_state.db.get("gold", 0) + st.session_state.db.get("arbitrage", 0) + st.session_state.db.get("fixed_income", 0)),
+                "total_liquidity": (cash + fd + st.session_state.db.get("credit_limit", 0)), 
+                "net_worth": (cash + fd + epf + mutual_funds + stocks + gold + arbitrage + fixed_income),
                 "feedback": st.session_state.db.get("feedback_input", ""),
                 "persona": st.session_state.db.get("persona", "blank"),
-                "practical_age": st.session_state.get('practical_age', 0),
-                "gap_val": st.session_state.get('gap_val', 0.0), 
-                "extra_sip_req": st.session_state.get('extra_sip_req', 0.0)
+                "practical_age": int(practical_age),
+                "gap_val": float(gap_val), 
+                "extra_sip_req": float(extra_sip_req)
             }
             supabase.table("user_data").upsert(payload).execute()
-    except Exception as e: 
-        pass
+        except Exception as e: 
+            pass
