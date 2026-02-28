@@ -42,6 +42,23 @@ except Exception as e:
     pass
 
 # ==========================================
+# ⬆️ AUTO-SCROLL TO TOP (JS Bridge)
+# ==========================================
+if st.session_state.get('scroll_to_top', False):
+    components.html(
+        """
+        <script>
+            var main_element = window.parent.document.querySelector('.main');
+            if (main_element) {
+                main_element.scrollTo(0, 0);
+            }
+        </script>
+        """,
+        height=0
+    )
+    st.session_state['scroll_to_top'] = False
+
+# ==========================================
 # 🎨 CUSTOM CSS FOR MOBILE UX
 # ==========================================
 custom_css = """
@@ -89,6 +106,10 @@ if 'db' not in st.session_state: st.session_state.db = {}
 
 def sync(key):
     st.session_state.db[key] = st.session_state[key]
+
+def trigger_scroll_and_rerun():
+    st.session_state['scroll_to_top'] = True
+    st.rerun()
 
 # ==========================================
 # 📈 CURRENCY FORMATTING LOGIC
@@ -154,6 +175,7 @@ def load_persona_to_state(persona_key, curr_choice):
     is_inr_mode = ("₹" in curr_choice)
     
     st.session_state.db = {} 
+    st.session_state.db["persona"] = persona_key
     
     if persona_key == "blank":
         st.session_state.db.update({
@@ -210,18 +232,21 @@ if st.session_state.step == 0:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    if st.button("💻 Load 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
-        load_persona_to_state("techie", curr)
-        st.rerun()
-    if st.button("🏔️ Load 'The Family' (Stability & Safe Assets Focus)", width="stretch"):
-        load_persona_to_state("family", curr)
-        st.rerun()
-    if st.button("🔥 Load 'The FIRE Chaser' (Extreme Saving, Retiring at 45)", width="stretch"):
-        load_persona_to_state("fire", curr)
-        st.rerun()
+    # Currency Gate: Only show Indian Personas if INR is selected
+    if "₹" in curr:
+        if st.button("💻 Load 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
+            load_persona_to_state("techie", curr)
+            trigger_scroll_and_rerun()
+        if st.button("🏔️ Load 'The Family' (Stability & Safe Assets Focus)", width="stretch"):
+            load_persona_to_state("family", curr)
+            trigger_scroll_and_rerun()
+        if st.button("🔥 Load 'The FIRE Chaser' (Extreme Saving, Retiring at 45)", width="stretch"):
+            load_persona_to_state("fire", curr)
+            trigger_scroll_and_rerun()
+            
     if st.button("🛠️ Start from a Blank Template", type="primary", width="stretch"):
         load_persona_to_state("blank", curr)
-        st.rerun()
+        trigger_scroll_and_rerun()
 
 # -----------------------------------
 # STEPS 1-4: THE GUIDED INPUT FLOW
@@ -349,21 +374,21 @@ elif 1 <= st.session_state.step <= 4:
         if st.session_state.step == 1:
             if st.button("⬅️ Change Profile", width="stretch"):
                 st.session_state.step = 0
-                st.rerun()
+                trigger_scroll_and_rerun()
         else:
             if st.button("⬅️ Back", width="stretch"):
                 st.session_state.step -= 1
-                st.rerun()
+                trigger_scroll_and_rerun()
                 
     with b_col3:
         if st.session_state.step < 4:
             if st.button("Next ➡️", type="primary", width="stretch"):
                 st.session_state.step += 1
-                st.rerun()
+                trigger_scroll_and_rerun()
         elif st.session_state.step == 4:
             if st.button("🚀 Calculate My Freedom", type="primary", width="stretch"):
                 st.session_state.step = 5
-                st.rerun()
+                trigger_scroll_and_rerun()
 
 # -----------------------------------
 # STEP 5: THE MAGIC REVEAL (RESULTS)
@@ -373,7 +398,7 @@ elif st.session_state.step == 5:
     c_back, _, _ = st.columns([1, 3, 3])
     if c_back.button("⬅️ Edit Inputs", width="stretch"):
         st.session_state.step = 4
-        st.rerun()
+        trigger_scroll_and_rerun()
     
     # 🔒 Extract all values directly from our protected vault
     age = st.session_state.db.get("age", 30)
@@ -435,11 +460,9 @@ elif st.session_state.step == 5:
     target_row = base_df[base_df['Age'] == safe_retire_age].iloc[0] if safe_retire_age in base_df['Age'].values else base_df.iloc[-1]
     gap_val = float(target_row['Gap'])
     
-    # Mathematical Safety Buffer: Force round UP to next whole unit
     raw_extra_sip = float(calculator.solve_extra_sip_needed(base_calc_in))
     extra_sip_req = math.ceil(raw_extra_sip)
     
-    # Failsafe: if there's a negative gap but the SIP solver rounded to 0
     if gap_val < -10 and extra_sip_req == 0:
         extra_sip_req = 1
 
@@ -627,7 +650,14 @@ elif st.session_state.step == 5:
         else:
             chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
 
-        base_chart = alt.Chart(plot_df).encode(x=alt.X('Age:Q', axis=alt.Axis(format='d')))
+        # 📱 Mobile-optimized Altair Chart
+        base_chart = alt.Chart(plot_df).encode(
+            # labelOverlap=True and tickCount=8 prevents the X-axis from crowding on mobile
+            x=alt.X('Age:Q', axis=alt.Axis(format='d', labelOverlap=True, tickCount=8)) 
+        ).properties(
+            height=450 # 📱 Forced height gives the lines more vertical room
+        )
+        
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
         
         c1 = base_chart.mark_line(color='#00FF00', strokeWidth=3).encode(
@@ -733,7 +763,7 @@ elif st.session_state.step == 5:
                 "total_liquidity": (cash + fd + st.session_state.db.get("credit_limit", 0)), 
                 "net_worth": (cash + fd + epf + mutual_funds + stocks + gold + arbitrage + fixed_income),
                 "feedback": st.session_state.db.get("feedback_input", ""),
-                "persona": "",
+                "persona": st.session_state.db.get("persona", "blank"),
                 "practical_age": int(practical_age),
                 "gap_val": float(gap_val), 
                 "extra_sip_req": float(extra_sip_req)
