@@ -519,7 +519,7 @@ elif st.session_state.step == 5:
         st.markdown("### ⚡ Interactive Strategy Controls")
         qc1, qc2 = st.columns(2)
         
-        fd_trap_toggled = qc1.toggle("🛡️ **Move 100% to Risk-Free (FD / CDs) at Retirement**", value=False)
+        fd_trap_toggled = qc1.toggle("🛡️ **Move your corpus 100% to Risk-Free (FD / CDs) at Retirement**", value=False)
         trap_banner_placeholder = st.empty()
         
         retire_mode = "off"
