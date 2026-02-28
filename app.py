@@ -42,48 +42,6 @@ except Exception as e:
     pass
 
 # ==========================================
-# ⬆️ AUTO-SCROLL TO TOP (Aggressive JS Bridge)
-# ==========================================
-if st.session_state.get('scroll_to_top', False):
-    components.html(
-        """
-        <script>
-            function forceScrollToTop() {
-                try {
-                    // Try to scroll the main browser window
-                    window.parent.scrollTo({top: 0, left: 0, behavior: 'auto'});
-                    
-                    // Attack all known Streamlit scroll containers
-                    var parentDoc = window.parent.document;
-                    var containers = [
-                        '[data-testid="stAppViewContainer"]',
-                        '[data-testid="stMainBlockContainer"]',
-                        'section.main',
-                        '.main'
-                    ];
-                    
-                    for (var i = 0; i < containers.length; i++) {
-                        var el = parentDoc.querySelector(containers[i]);
-                        if (el) {
-                            el.scrollTop = 0;
-                        }
-                    }
-                } catch (e) {}
-            }
-            
-            // Fire instantly, then fire again after Streamlit finishes rendering 
-            // to completely override Streamlit's stubborn scroll memory.
-            forceScrollToTop();
-            setTimeout(forceScrollToTop, 100);
-            setTimeout(forceScrollToTop, 300);
-            setTimeout(forceScrollToTop, 500);
-        </script>
-        """,
-        height=0
-    )
-    st.session_state['scroll_to_top'] = False
-
-# ==========================================
 # 🎨 CUSTOM CSS FOR MOBILE UX
 # ==========================================
 custom_css = """
@@ -674,16 +632,16 @@ elif st.session_state.step == 5:
         else:
             chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
 
-        # 📱 Aggressively Mobile-Optimized Altair Engine
+        # 📱 BRUTE-FORCE MOBILE GRAPH FIX
         base_chart = alt.Chart(plot_df).encode(
             x=alt.X('Age:Q', axis=alt.Axis(
                 format='d', 
-                tickMinStep=5,         # Prevents ages like 61, 62, 63 from rendering
-                labelOverlap='greedy', # Auto-deletes any overlapping text on narrow screens
-                grid=False             # Deletes vertical grid lines to clear clutter
+                tickCount=6,         # strictly forces a maximum of 6 numbers on the X axis
+                labelAngle=-45,      # Rotates the text 45 degrees so it physically cannot overlap
+                grid=False           
             ))
         ).properties(
-            height=450                 # Stretches the chart taller so lines don't squish together
+            height=500               # Gives the lines a huge amount of vertical space
         )
         
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
@@ -745,39 +703,78 @@ elif st.session_state.step == 5:
     if st.button("Submit Feedback", type="primary", width="stretch"):
         st.success("Thank you! Your feedback has been securely submitted.")
 
-    # ==========================================
-    # 💾 DB AUTO-SAVE 
-    # ==========================================
-    if supabase:
-        try:
+# ==========================================
+# ⬆️ THE NUCLEAR SCROLL-TO-TOP TRIGGER
+# (Placed at the bottom so it fires after the UI renders)
+# ==========================================
+if st.session_state.get('scroll_to_top', False):
+    components.html(
+        """
+        <script>
+            function forceScroll() {
+                try {
+                    // Tell the window to scroll to top instantly
+                    window.parent.scrollTo({top: 0, left: 0, behavior: 'auto'});
+                    
+                    // Attack the specific internal Streamlit divs
+                    var doc = window.parent.document;
+                    var view = doc.querySelector('[data-testid="stAppViewContainer"]');
+                    var main = doc.querySelector('.main');
+                    
+                    if (view) { view.style.scrollBehavior = 'auto'; view.scrollTop = 0; }
+                    if (main) { main.style.scrollBehavior = 'auto'; main.scrollTop = 0; }
+                    
+                    doc.body.scrollTop = 0;
+                    doc.documentElement.scrollTop = 0;
+                } catch (e) {}
+            }
+            
+            // Fire instantly, then hammer it again 3 times to beat React's internal state load
+            forceScroll();
+            setTimeout(forceScroll, 100);
+            setTimeout(forceScroll, 250);
+            setTimeout(forceScroll, 500);
+        </script>
+        """,
+        height=0
+    )
+    st.session_state['scroll_to_top'] = False
+
+# ==========================================
+# 💾 DB AUTO-SAVE 
+# ==========================================
+if supabase:
+    try:
+        # Only save if user has proceeded past step 0
+        if st.session_state.step > 0:
             payload = {
                 "id": st.session_state['user_id'], 
                 "currency": st.session_state['curr_choice'], 
-                "age": age, 
-                "retire_age": safe_retire_age, 
+                "age": st.session_state.db.get("age", 30), 
+                "retire_age": max(st.session_state.db.get("age", 30), st.session_state.db.get("retire_age", 60)), 
                 "dependents": st.session_state.db.get("dependents", 0), 
                 "income": st.session_state.db.get("income", 0), 
                 "basic_salary": int(st.session_state.db.get("monthly_pf", 0)), 
-                "living_expense": living_expense, 
-                "rent": rent, 
+                "living_expense": st.session_state.db.get("living_expense", 0), 
+                "rent": st.session_state.db.get("rent", 0), 
                 "tax_slab": float(st.session_state.db.get("tax_slab_idx", 6)), 
-                "use_post_tax": use_post_tax, 
-                "cash": cash, 
-                "fd": fd, 
+                "use_post_tax": st.session_state.db.get("use_post_tax", True), 
+                "cash": st.session_state.db.get("cash", 0), 
+                "fd": st.session_state.db.get("fd", 0), 
                 "credit_limit": st.session_state.db.get("credit_limit", 0), 
                 "emi": st.session_state.db.get("emi", 0), 
                 "term_insurance": st.session_state.db.get("term_insurance", 0), 
                 "health_insurance": st.session_state.db.get("health_insurance", 0), 
-                "epf": epf, 
-                "mutual_funds": mutual_funds, 
-                "stocks": stocks, 
-                "gold": gold, 
-                "arbitrage": arbitrage, 
-                "fixed_income": float(fixed_income), 
-                "current_sip": current_sip, 
+                "epf": st.session_state.db.get("epf", 0), 
+                "mutual_funds": st.session_state.db.get("mutual_funds", 0), 
+                "stocks": st.session_state.db.get("stocks", 0), 
+                "gold": st.session_state.db.get("gold", 0), 
+                "arbitrage": st.session_state.db.get("arbitrage", 0), 
+                "fixed_income": float(st.session_state.db.get("fixed_income", 0)), 
+                "current_sip": st.session_state.db.get("current_sip", 0), 
                 "step_up": float(st.session_state.db.get("step_up", 10)), 
-                "housing_goal": housing_goal, 
-                "house_cost": house_cost, 
+                "housing_goal": h_options[st.session_state.db.get("housing_idx", 0)], 
+                "house_cost": st.session_state.db.get("house_cost", 0), 
                 "inflation": float(st.session_state.db.get("inflation", 6.0)), 
                 "rent_inflation": float(st.session_state.db.get("rent_inflation", 8.0)), 
                 "swr": 0.0,
@@ -788,14 +785,14 @@ elif st.session_state.step == 5:
                 "rate_gold": float(st.session_state.db.get("rate_gold", 8.0)), 
                 "rate_arbitrage": float(st.session_state.db.get("rate_arbitrage", 7.5)), 
                 "rate_fixed": float(st.session_state.db.get("rate_fixed", 7.5)), 
-                "total_liquidity": (cash + fd + st.session_state.db.get("credit_limit", 0)), 
-                "net_worth": (cash + fd + epf + mutual_funds + stocks + gold + arbitrage + fixed_income),
+                "total_liquidity": (st.session_state.db.get("cash", 0) + st.session_state.db.get("fd", 0) + st.session_state.db.get("credit_limit", 0)), 
+                "net_worth": (st.session_state.db.get("cash", 0) + st.session_state.db.get("fd", 0) + st.session_state.db.get("epf", 0) + st.session_state.db.get("mutual_funds", 0) + st.session_state.db.get("stocks", 0) + st.session_state.db.get("gold", 0) + st.session_state.db.get("arbitrage", 0) + st.session_state.db.get("fixed_income", 0)),
                 "feedback": st.session_state.db.get("feedback_input", ""),
                 "persona": st.session_state.db.get("persona", "blank"),
-                "practical_age": int(practical_age),
-                "gap_val": float(gap_val), 
-                "extra_sip_req": float(extra_sip_req)
+                "practical_age": st.session_state.get('practical_age', 0),
+                "gap_val": st.session_state.get('gap_val', 0.0), 
+                "extra_sip_req": st.session_state.get('extra_sip_req', 0.0)
             }
             supabase.table("user_data").upsert(payload).execute()
-        except Exception as e: 
-            pass
+    except Exception as e: 
+        pass
