@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import altair as alt
 import uuid
 import pandas as pd
@@ -9,6 +10,36 @@ import calculator
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Financial Freedom Engine", page_icon="🚀", layout="wide", initial_sidebar_state="collapsed")
+
+# ==========================================
+# 📊 GOOGLE ANALYTICS (Bulletproof Injection)
+# ==========================================
+try:
+    ga_id = st.secrets.get("GA_ID", None)
+    if ga_id:
+        ga_script = f"""
+        <script>
+            if (!window.parent.document.getElementById('ga-script')) {{
+                var script1 = window.parent.document.createElement('script');
+                script1.id = 'ga-script';
+                script1.async = true;
+                script1.src = 'https://www.googletagmanager.com/gtag/js?id={ga_id}';
+                window.parent.document.head.appendChild(script1);
+
+                var script2 = window.parent.document.createElement('script');
+                script2.innerHTML = `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){{dataLayer.push(arguments);}}
+                  gtag('js', new Date());
+                  gtag('config', '{ga_id}');
+                `;
+                window.parent.document.head.appendChild(script2);
+            }}
+        </script>
+        """
+        components.html(ga_script, width=0, height=0)
+except Exception as e:
+    pass
 
 # ==========================================
 # 🎨 CUSTOM CSS FOR MOBILE UX
@@ -404,7 +435,7 @@ elif st.session_state.step == 5:
     target_row = base_df[base_df['Age'] == safe_retire_age].iloc[0] if safe_retire_age in base_df['Age'].values else base_df.iloc[-1]
     gap_val = float(target_row['Gap'])
     
-    # Mathematical Safety Buffer: Force round UP to next whole unit to prevent floating-point paradox
+    # Mathematical Safety Buffer: Force round UP to next whole unit
     raw_extra_sip = float(calculator.solve_extra_sip_needed(base_calc_in))
     extra_sip_req = math.ceil(raw_extra_sip)
     
@@ -668,11 +699,10 @@ elif st.session_state.step == 5:
                 "retire_age": safe_retire_age, 
                 "dependents": st.session_state.db.get("dependents", 0), 
                 "income": st.session_state.db.get("income", 0), 
-                "basic_salary": 0,  
-                "monthly_pf": st.session_state.db.get("monthly_pf", 0), 
+                "basic_salary": int(st.session_state.db.get("monthly_pf", 0)), 
                 "living_expense": living_expense, 
                 "rent": rent, 
-                "tax_slab": st.session_state.db.get("tax_slab_idx", 6), 
+                "tax_slab": float(st.session_state.db.get("tax_slab_idx", 6)), 
                 "use_post_tax": use_post_tax, 
                 "cash": cash, 
                 "fd": fd, 
@@ -685,25 +715,28 @@ elif st.session_state.step == 5:
                 "stocks": stocks, 
                 "gold": gold, 
                 "arbitrage": arbitrage, 
-                "fixed_income": fixed_income, 
+                "fixed_income": float(fixed_income), 
                 "current_sip": current_sip, 
-                "step_up": st.session_state.db.get("step_up", 10), 
+                "step_up": float(st.session_state.db.get("step_up", 10)), 
                 "housing_goal": housing_goal, 
                 "house_cost": house_cost, 
-                "inflation": st.session_state.db.get("inflation", 6.0), 
-                "rent_inflation": st.session_state.db.get("rent_inflation", 8.0), 
-                "rate_new_sip": st.session_state.db.get("rate_sip", 12.0), 
-                "rate_fd": st.session_state.db.get("rate_fd_gross", 7.0), 
-                "rate_epf": st.session_state.db.get("rate_epf", 8.1), 
-                "rate_equity": st.session_state.db.get("rate_equity", 12.0), 
-                "rate_gold": st.session_state.db.get("rate_gold", 8.0), 
-                "rate_arbitrage": st.session_state.db.get("rate_arbitrage", 7.5), 
-                "rate_fixed": st.session_state.db.get("rate_fixed", 7.5), 
+                "inflation": float(st.session_state.db.get("inflation", 6.0)), 
+                "rent_inflation": float(st.session_state.db.get("rent_inflation", 8.0)), 
+                "swr": 0.0,
+                "rate_new_sip": float(st.session_state.db.get("rate_sip", 12.0)), 
+                "rate_fd": float(st.session_state.db.get("rate_fd_gross", 7.0)), 
+                "rate_epf": float(st.session_state.db.get("rate_epf", 8.1)), 
+                "rate_equity": float(st.session_state.db.get("rate_equity", 12.0)), 
+                "rate_gold": float(st.session_state.db.get("rate_gold", 8.0)), 
+                "rate_arbitrage": float(st.session_state.db.get("rate_arbitrage", 7.5)), 
+                "rate_fixed": float(st.session_state.db.get("rate_fixed", 7.5)), 
                 "total_liquidity": (cash + fd + st.session_state.db.get("credit_limit", 0)), 
                 "net_worth": (cash + fd + epf + mutual_funds + stocks + gold + arbitrage + fixed_income),
-                "practical_age": practical_age, 
-                "extra_sip_req": extra_sip_req,
-                "feedback": st.session_state.db.get("feedback_input", "") 
+                "feedback": st.session_state.db.get("feedback_input", ""),
+                "persona": "",
+                "practical_age": int(practical_age),
+                "gap_val": float(gap_val), 
+                "extra_sip_req": float(extra_sip_req)
             }
             supabase.table("user_data").upsert(payload).execute()
         except Exception as e: 
