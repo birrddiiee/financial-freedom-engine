@@ -42,20 +42,41 @@ except Exception as e:
     pass
 
 # ==========================================
-# ⬆️ AUTO-SCROLL TO TOP (Bulletproof JS Bridge)
+# ⬆️ AUTO-SCROLL TO TOP (Aggressive JS Bridge)
 # ==========================================
 if st.session_state.get('scroll_to_top', False):
     components.html(
         """
         <script>
-            // Target the modern Streamlit scroll container
-            const viewContainer = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-            if (viewContainer) {
-                viewContainer.scrollTo({top: 0, behavior: 'smooth'});
-            } else {
-                // Fallback for older browsers
-                window.parent.scrollTo({top: 0, behavior: 'smooth'});
+            function forceScrollToTop() {
+                try {
+                    // Try to scroll the main browser window
+                    window.parent.scrollTo({top: 0, left: 0, behavior: 'auto'});
+                    
+                    // Attack all known Streamlit scroll containers
+                    var parentDoc = window.parent.document;
+                    var containers = [
+                        '[data-testid="stAppViewContainer"]',
+                        '[data-testid="stMainBlockContainer"]',
+                        'section.main',
+                        '.main'
+                    ];
+                    
+                    for (var i = 0; i < containers.length; i++) {
+                        var el = parentDoc.querySelector(containers[i]);
+                        if (el) {
+                            el.scrollTop = 0;
+                        }
+                    }
+                } catch (e) {}
             }
+            
+            // Fire instantly, then fire again after Streamlit finishes rendering 
+            // to completely override Streamlit's stubborn scroll memory.
+            forceScrollToTop();
+            setTimeout(forceScrollToTop, 100);
+            setTimeout(forceScrollToTop, 300);
+            setTimeout(forceScrollToTop, 500);
         </script>
         """,
         height=0
@@ -653,16 +674,16 @@ elif st.session_state.step == 5:
         else:
             chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
 
-        # 📱 Mobile-Optimized Altair Engine
+        # 📱 Aggressively Mobile-Optimized Altair Engine
         base_chart = alt.Chart(plot_df).encode(
             x=alt.X('Age:Q', axis=alt.Axis(
                 format='d', 
-                tickMinStep=5,        # 📱 Forces a minimum 5-year gap between text labels so they never touch
-                labelOverlap='greedy', # 📱 Auto-deletes any label that gets too close to another
-                grid=False            # 📱 Deletes vertical gridlines to reduce "jail cell" clutter
+                tickMinStep=5,         # Prevents ages like 61, 62, 63 from rendering
+                labelOverlap='greedy', # Auto-deletes any overlapping text on narrow screens
+                grid=False             # Deletes vertical grid lines to clear clutter
             ))
         ).properties(
-            height=450                # 📱 Stretches the graph vertically to give the 3 lines space to breathe
+            height=450                 # Stretches the chart taller so lines don't squish together
         )
         
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
