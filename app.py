@@ -42,6 +42,53 @@ except Exception as e:
     pass
 
 # ==========================================
+# ☁️ SUPABASE & BULLETPROOF SESSION STATE
+# ==========================================
+@st.cache_resource
+def init_connection():
+    try: return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+    except: return None
+
+supabase = init_connection()
+
+if 'user_id' not in st.session_state: st.session_state['user_id'] = str(uuid.uuid4())
+if 'step' not in st.session_state: st.session_state['step'] = 0
+
+# Track the current page state to trigger the scroll script
+if 'current_scroll_step' not in st.session_state: 
+    st.session_state['current_scroll_step'] = st.session_state['step']
+
+# 🛡️ THE BULLETPROOF DATA VAULT
+if 'db' not in st.session_state: st.session_state.db = {}
+
+def sync(key):
+    st.session_state.db[key] = st.session_state[key]
+
+# ==========================================
+# ⬆️ STATE-TRIGGERED SCROLL TO TOP
+# ==========================================
+# If the user changed tabs, we fire the JS exactly once to reset the scroll view
+if st.session_state['step'] != st.session_state['current_scroll_step']:
+    st.session_state['current_scroll_step'] = st.session_state['step']
+    components.html(
+        """
+        <script>
+            try {
+                // Target Streamlit's specific internal scroll containers
+                var view = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+                if (view) { view.scrollTop = 0; }
+                
+                var main = window.parent.document.querySelector('.main');
+                if (main) { main.scrollTop = 0; }
+                
+                window.parent.scrollTo(0, 0);
+            } catch (e) {}
+        </script>
+        """,
+        height=0
+    )
+
+# ==========================================
 # 🎨 CUSTOM CSS FOR MOBILE UX
 # ==========================================
 custom_css = """
@@ -70,38 +117,6 @@ custom_css = """
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
-
-# ==========================================
-# ☁️ SUPABASE & BULLETPROOF SESSION STATE
-# ==========================================
-@st.cache_resource
-def init_connection():
-    try: return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
-    except: return None
-
-supabase = init_connection()
-
-if 'user_id' not in st.session_state: st.session_state['user_id'] = str(uuid.uuid4())
-if 'step' not in st.session_state: st.session_state['step'] = 0
-if 'last_step' not in st.session_state: st.session_state['last_step'] = 0
-
-# 🛡️ THE BULLETPROOF DATA VAULT
-if 'db' not in st.session_state: st.session_state.db = {}
-
-def sync(key):
-    st.session_state.db[key] = st.session_state[key]
-
-# ⬆️ THE "NO-JS" AUTOFOCUS SCROLL HACK
-# If the step changes, we render a hidden input field with 'autofocus'.
-# The mobile browser will instantly snap to the top of the screen to look at it.
-if st.session_state.step != st.session_state.last_step:
-    st.markdown('<input autofocus style="opacity: 0; width: 0; height: 0; position: absolute; top: 0; pointer-events: none;" />', unsafe_allow_html=True)
-    st.session_state.last_step = st.session_state.step
-
-def trigger_scroll_and_rerun():
-    # We purposefully misalign the last_step so the autofocus hack fires on reload
-    st.session_state['last_step'] = -1 
-    st.rerun()
 
 # ==========================================
 # 📈 CURRENCY FORMATTING LOGIC
@@ -192,6 +207,7 @@ def load_persona_to_state(persona_key, curr_choice):
             st.session_state.db[k] = v
             
     st.session_state.step = 1
+    st.rerun()
 
 if 'curr_choice' not in st.session_state:
     st.session_state['curr_choice'] = "🇮🇳 INR (₹)"
@@ -227,17 +243,13 @@ if st.session_state.step == 0:
     if "₹" in curr:
         if st.button("💻 Load 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
             load_persona_to_state("techie", curr)
-            trigger_scroll_and_rerun()
         if st.button("🏔️ Load 'The Family' (Stability & Safe Assets Focus)", width="stretch"):
             load_persona_to_state("family", curr)
-            trigger_scroll_and_rerun()
         if st.button("🔥 Load 'The FIRE Chaser' (Extreme Saving, Retiring at 45)", width="stretch"):
             load_persona_to_state("fire", curr)
-            trigger_scroll_and_rerun()
             
     if st.button("🛠️ Start from a Blank Template", type="primary", width="stretch"):
         load_persona_to_state("blank", curr)
-        trigger_scroll_and_rerun()
 
 # -----------------------------------
 # STEPS 1-4: THE GUIDED INPUT FLOW
@@ -365,21 +377,21 @@ elif 1 <= st.session_state.step <= 4:
         if st.session_state.step == 1:
             if st.button("⬅️ Change Profile", width="stretch"):
                 st.session_state.step = 0
-                trigger_scroll_and_rerun()
+                st.rerun()
         else:
             if st.button("⬅️ Back", width="stretch"):
                 st.session_state.step -= 1
-                trigger_scroll_and_rerun()
+                st.rerun()
                 
     with b_col3:
         if st.session_state.step < 4:
             if st.button("Next ➡️", type="primary", width="stretch"):
                 st.session_state.step += 1
-                trigger_scroll_and_rerun()
+                st.rerun()
         elif st.session_state.step == 4:
             if st.button("🚀 Calculate My Freedom", type="primary", width="stretch"):
                 st.session_state.step = 5
-                trigger_scroll_and_rerun()
+                st.rerun()
 
 # -----------------------------------
 # STEP 5: THE MAGIC REVEAL (RESULTS)
@@ -389,7 +401,7 @@ elif st.session_state.step == 5:
     c_back, _, _ = st.columns([1, 3, 3])
     if c_back.button("⬅️ Edit Inputs", width="stretch"):
         st.session_state.step = 4
-        trigger_scroll_and_rerun()
+        st.rerun()
     
     # 🔒 Extract all values directly from our protected vault
     age = st.session_state.db.get("age", 30)
@@ -636,41 +648,43 @@ elif st.session_state.step == 5:
         plot_df['Expense_Fmt'] = plot_df['Annual Expense'].apply(lambda x: tooltip_fmt(x, is_inr))
         plot_df['Gap_Fmt'] = plot_df['Gap'].apply(lambda x: tooltip_fmt(x, is_inr))
 
+        # 📱 THE CORE GRAPH FIX: COMPRESSING THE Y-AXIS TEXT
+        # By removing "Cr" and just using short values (e.g. 1.5Cr), the graph body expands to fill the screen
         if is_inr:
-            chart_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.2f') + ' Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.2f') + ' L' : format(datum.value, ',.0f')"
+            y_axis_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.1f') + 'Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.0f') + 'L' : format(datum.value, '.0s')"
         else:
-            chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
+            y_axis_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.1f') + 'M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + 'k' : format(datum.value, '.0s')"
 
-        # 📱 THE HARD-CODED X-AXIS FIX
-        # We physically force Altair to only print labels every 10 years, starting from the nearest decade
-        start_tick = (int(min(plot_df['Age'])) // 10) * 10
-        end_tick = int(max(plot_df['Age']))
-        x_ticks = list(range(start_tick, end_tick + 1, 10))
-
+        # 📱 THE CORE GRAPH FIX: HARDCODING THE X-AXIS
         base_chart = alt.Chart(plot_df).encode(
             x=alt.X('Age:Q', axis=alt.Axis(
-                format='d', 
-                values=x_ticks,        # ONLY prints 30, 40, 50, 60... Impossible to get congested now!
-                labelAngle=0,          # Keeps text straight and easy to read
-                grid=False             # Deletes vertical prison bars
+                values=[30, 40, 50, 60, 70, 80, 90, 100], # Strictly force only decades
+                format='d',
+                title=None, # Stripping the title creates more screen space
+                labelAngle=0,
+                grid=False
             ))
         ).properties(
-            height=450                 # Prevents the Y-axis lines from squishing together
+            height=450 
         )
         
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
         
         c1 = base_chart.mark_line(color='#00FF00', strokeWidth=3).encode(
-            y=alt.Y('Projected Wealth:Q', axis=alt.Axis(labelExpr=chart_fmt, title=f"Amount ({sym})", tickCount=5))
+            y=alt.Y('Projected Wealth:Q', axis=alt.Axis(
+                labelExpr=y_axis_fmt, 
+                title=None, # Stripping the title creates more screen space
+                tickCount=4 # Fewer numbers on the side = cleaner look
+            ))
         )
         c2 = base_chart.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
-            y=alt.Y('Required Target:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
+            y=alt.Y('Required Target:Q', axis=alt.Axis(labelExpr=y_axis_fmt, title=None))
         )
         
         layers = [c1, c2]
         if 'Annual Expense' in plot_df.columns:
             c3 = base_chart.mark_line(color='#FFA500', strokeWidth=2).encode(
-                y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
+                y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=y_axis_fmt, title=None))
             )
             layers.append(c3)
         
