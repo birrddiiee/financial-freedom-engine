@@ -42,15 +42,19 @@ except Exception as e:
     pass
 
 # ==========================================
-# ⬆️ AUTO-SCROLL TO TOP (JS Bridge)
+# ⬆️ AUTO-SCROLL TO TOP (Bulletproof JS Bridge)
 # ==========================================
 if st.session_state.get('scroll_to_top', False):
     components.html(
         """
         <script>
-            var main_element = window.parent.document.querySelector('.main');
-            if (main_element) {
-                main_element.scrollTo(0, 0);
+            // Target the modern Streamlit scroll container
+            const viewContainer = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
+            if (viewContainer) {
+                viewContainer.scrollTo({top: 0, behavior: 'smooth'});
+            } else {
+                // Fallback for older browsers
+                window.parent.scrollTo({top: 0, behavior: 'smooth'});
             }
         </script>
         """,
@@ -232,7 +236,6 @@ if st.session_state.step == 0:
     
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # Currency Gate: Only show Indian Personas if INR is selected
     if "₹" in curr:
         if st.button("💻 Load 'The City Techie' (High Income, Renting, Aggressive)", width="stretch"):
             load_persona_to_state("techie", curr)
@@ -650,18 +653,22 @@ elif st.session_state.step == 5:
         else:
             chart_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.2f') + ' M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + ' k' : format(datum.value, ',.0f')"
 
-        # 📱 Mobile-optimized Altair Chart
+        # 📱 Mobile-Optimized Altair Engine
         base_chart = alt.Chart(plot_df).encode(
-            # labelOverlap=True and tickCount=8 prevents the X-axis from crowding on mobile
-            x=alt.X('Age:Q', axis=alt.Axis(format='d', labelOverlap=True, tickCount=8)) 
+            x=alt.X('Age:Q', axis=alt.Axis(
+                format='d', 
+                tickMinStep=5,        # 📱 Forces a minimum 5-year gap between text labels so they never touch
+                labelOverlap='greedy', # 📱 Auto-deletes any label that gets too close to another
+                grid=False            # 📱 Deletes vertical gridlines to reduce "jail cell" clutter
+            ))
         ).properties(
-            height=450 # 📱 Forced height gives the lines more vertical room
+            height=450                # 📱 Stretches the graph vertically to give the 3 lines space to breathe
         )
         
         sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
         
         c1 = base_chart.mark_line(color='#00FF00', strokeWidth=3).encode(
-            y=alt.Y('Projected Wealth:Q', axis=alt.Axis(labelExpr=chart_fmt, title=f"Amount ({sym})"))
+            y=alt.Y('Projected Wealth:Q', axis=alt.Axis(labelExpr=chart_fmt, title=f"Amount ({sym})", tickCount=5))
         )
         c2 = base_chart.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
             y=alt.Y('Required Target:Q', axis=alt.Axis(labelExpr=chart_fmt, title=""))
