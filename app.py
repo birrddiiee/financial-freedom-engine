@@ -1,6 +1,5 @@
 import streamlit as st
 import streamlit.components.v1 as components
-import altair as alt
 import uuid
 import pandas as pd
 import math
@@ -54,10 +53,6 @@ supabase = init_connection()
 if 'user_id' not in st.session_state: st.session_state['user_id'] = str(uuid.uuid4())
 if 'step' not in st.session_state: st.session_state['step'] = 0
 
-# Track the current page state to trigger the scroll script
-if 'current_scroll_step' not in st.session_state: 
-    st.session_state['current_scroll_step'] = st.session_state['step']
-
 # 🛡️ THE BULLETPROOF DATA VAULT
 if 'db' not in st.session_state: st.session_state.db = {}
 
@@ -65,28 +60,33 @@ def sync(key):
     st.session_state.db[key] = st.session_state[key]
 
 # ==========================================
-# ⬆️ STATE-TRIGGERED SCROLL TO TOP
+# ⬆️ THE ULTIMATE NATIVE SCROLL FIX
 # ==========================================
-# If the user changed tabs, we fire the JS exactly once to reset the scroll view
-if st.session_state['step'] != st.session_state['current_scroll_step']:
-    st.session_state['current_scroll_step'] = st.session_state['step']
-    components.html(
-        """
-        <script>
-            try {
-                // Target Streamlit's specific internal scroll containers
-                var view = window.parent.document.querySelector('[data-testid="stAppViewContainer"]');
-                if (view) { view.scrollTop = 0; }
-                
-                var main = window.parent.document.querySelector('.main');
-                if (main) { main.scrollTop = 0; }
-                
-                window.parent.scrollTo(0, 0);
-            } catch (e) {}
-        </script>
-        """,
-        height=0
-    )
+def navigate_to_step(new_step):
+    st.session_state.step = new_step
+    st.session_state['scroll_to_top'] = True
+    st.rerun()
+
+if st.session_state.get('scroll_to_top', False):
+    scroll_js = """
+    <script>
+        // Execute natively in the main browser DOM (bypassing iframes)
+        var containers = [
+            document.querySelector('[data-testid="stAppViewContainer"]'),
+            document.querySelector('.main'),
+            document.documentElement,
+            document.body
+        ];
+        containers.forEach(function(c) { if(c) c.scrollTop = 0; });
+        window.scrollTo(0, 0);
+    </script>
+    """
+    try:
+        st.html(scroll_js) # Modern Streamlit native bypass
+    except Exception:
+        components.html(scroll_js, height=0) # Fallback
+        
+    st.session_state['scroll_to_top'] = False
 
 # ==========================================
 # 🎨 CUSTOM CSS FOR MOBILE UX
@@ -206,8 +206,7 @@ def load_persona_to_state(persona_key, curr_choice):
         for k, v in personas_data[persona_key].items():
             st.session_state.db[k] = v
             
-    st.session_state.step = 1
-    st.rerun()
+    navigate_to_step(1)
 
 if 'curr_choice' not in st.session_state:
     st.session_state['curr_choice'] = "🇮🇳 INR (₹)"
@@ -376,22 +375,18 @@ elif 1 <= st.session_state.step <= 4:
     with b_col1:
         if st.session_state.step == 1:
             if st.button("⬅️ Change Profile", width="stretch"):
-                st.session_state.step = 0
-                st.rerun()
+                navigate_to_step(0)
         else:
             if st.button("⬅️ Back", width="stretch"):
-                st.session_state.step -= 1
-                st.rerun()
+                navigate_to_step(st.session_state.step - 1)
                 
     with b_col3:
         if st.session_state.step < 4:
             if st.button("Next ➡️", type="primary", width="stretch"):
-                st.session_state.step += 1
-                st.rerun()
+                navigate_to_step(st.session_state.step + 1)
         elif st.session_state.step == 4:
             if st.button("🚀 Calculate My Freedom", type="primary", width="stretch"):
-                st.session_state.step = 5
-                st.rerun()
+                navigate_to_step(5)
 
 # -----------------------------------
 # STEP 5: THE MAGIC REVEAL (RESULTS)
@@ -400,8 +395,7 @@ elif st.session_state.step == 5:
     
     c_back, _, _ = st.columns([1, 3, 3])
     if c_back.button("⬅️ Edit Inputs", width="stretch"):
-        st.session_state.step = 4
-        st.rerun()
+        navigate_to_step(4)
     
     # 🔒 Extract all values directly from our protected vault
     age = st.session_state.db.get("age", 30)
@@ -614,7 +608,7 @@ elif st.session_state.step == 5:
     # Generate Chart Data
     df = calculator.generate_forecast(plot_calc_in)
 
-    # --- 6. RENDER THE CHART ---
+    # --- 6. RENDER THE STREAMLIT NATIVE CHART ---
     with chart_container:
         st.subheader("📊 The 100-Year Wealth Trajectory")
         st.markdown("""
@@ -633,77 +627,23 @@ elif st.session_state.step == 5:
         else:
             plot_df = df.copy()
 
-        def tooltip_fmt(val, is_inr):
-            if is_inr:
-                if val >= 10000000: return f"₹ {val/10000000:.2f} Cr"
-                elif val >= 100000: return f"₹ {val/100000:.2f} L"
-                else: return f"₹ {val:,.0f}"
-            else:
-                if val >= 1000000: return f"{sym} {val/1000000:.2f} M"
-                elif val >= 1000: return f"{sym} {val/1000:.0f} k"
-                else: return f"{sym} {val:,.0f}"
-
-        plot_df['Wealth_Fmt'] = plot_df['Projected Wealth'].apply(lambda x: tooltip_fmt(x, is_inr))
-        plot_df['Target_Fmt'] = plot_df['Required Target'].apply(lambda x: tooltip_fmt(x, is_inr))
-        plot_df['Expense_Fmt'] = plot_df['Annual Expense'].apply(lambda x: tooltip_fmt(x, is_inr))
-        plot_df['Gap_Fmt'] = plot_df['Gap'].apply(lambda x: tooltip_fmt(x, is_inr))
-
-        # 📱 THE CORE GRAPH FIX: COMPRESSING THE Y-AXIS TEXT
-        # By removing "Cr" and just using short values (e.g. 1.5Cr), the graph body expands to fill the screen
-        if is_inr:
-            y_axis_fmt = "datum.value >= 10000000 ? format(datum.value / 10000000, '.1f') + 'Cr' : datum.value >= 100000 ? format(datum.value / 100000, '.0f') + 'L' : format(datum.value, '.0s')"
-        else:
-            y_axis_fmt = "datum.value >= 1000000 ? format(datum.value / 1000000, '.1f') + 'M' : datum.value >= 1000 ? format(datum.value / 1000, '.0f') + 'k' : format(datum.value, '.0s')"
-
-        # 📱 THE CORE GRAPH FIX: HARDCODING THE X-AXIS
-        base_chart = alt.Chart(plot_df).encode(
-            x=alt.X('Age:Q', axis=alt.Axis(
-                values=[30, 40, 50, 60, 70, 80, 90, 100], # Strictly force only decades
-                format='d',
-                title=None, # Stripping the title creates more screen space
-                labelAngle=0,
-                grid=False
-            ))
-        ).properties(
-            height=450 
-        )
+        # 📱 STREAMLIT NATIVE MOBILE GRAPH FIX
+        # We completely replace Altair with Streamlit's native st.line_chart
+        # It has deep, hardcoded mobile optimizations built by the Streamlit team
         
-        sel = alt.selection_point(nearest=True, on='mouseover', fields=['Age'], empty=False)
-        
-        c1 = base_chart.mark_line(color='#00FF00', strokeWidth=3).encode(
-            y=alt.Y('Projected Wealth:Q', axis=alt.Axis(
-                labelExpr=y_axis_fmt, 
-                title=None, # Stripping the title creates more screen space
-                tickCount=4 # Fewer numbers on the side = cleaner look
-            ))
-        )
-        c2 = base_chart.mark_line(color='#FF0000', strokeDash=[5,5]).encode(
-            y=alt.Y('Required Target:Q', axis=alt.Axis(labelExpr=y_axis_fmt, title=None))
-        )
-        
-        layers = [c1, c2]
         if 'Annual Expense' in plot_df.columns:
-            c3 = base_chart.mark_line(color='#FFA500', strokeWidth=2).encode(
-                y=alt.Y('Annual Expense:Q', axis=alt.Axis(labelExpr=y_axis_fmt, title=None))
-            )
-            layers.append(c3)
-        
-        pt = base_chart.mark_point().encode(
-            opacity=alt.value(0), 
-            tooltip=[
-                alt.Tooltip('Age:Q', title='Age'), 
-                alt.Tooltip('Wealth_Fmt:N', title='Wealth'), 
-                alt.Tooltip('Target_Fmt:N', title='Req. Target'), 
-                alt.Tooltip('Expense_Fmt:N', title='Expenses'),
-                alt.Tooltip('Gap_Fmt:N', title='Surplus/Gap')
-            ]
-        ).add_params(sel)
-        
-        rl = base_chart.mark_rule(color='gray').encode(
-            opacity=alt.condition(sel, alt.value(0.5), alt.value(0))
-        ).transform_filter(sel)
-        
-        st.altair_chart(alt.layer(*layers, pt, rl), use_container_width=True)
+            chart_data = plot_df[['Age', 'Projected Wealth', 'Required Target', 'Annual Expense']].set_index('Age')
+            try:
+                # Modern Streamlit natively supports custom colors for line charts
+                st.line_chart(chart_data, color=['#00FF00', '#FF0000', '#FFA500'], use_container_width=True)
+            except:
+                st.line_chart(chart_data, use_container_width=True) 
+        else:
+            chart_data = plot_df[['Age', 'Projected Wealth', 'Required Target']].set_index('Age')
+            try:
+                st.line_chart(chart_data, color=['#00FF00', '#FF0000'], use_container_width=True)
+            except:
+                st.line_chart(chart_data, use_container_width=True)
 
     # --- 7. AUDIT THE MATH ---
     with st.expander("🔍 Audit the Math: Year-by-Year Raw Data", expanded=False):
